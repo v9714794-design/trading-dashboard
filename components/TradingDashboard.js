@@ -22,13 +22,36 @@ const METALS = [
   { symbol: "XAU", label: "Gold", unit: "oz" },
   { symbol: "XAG", label: "Silver", unit: "oz" },
 ];
+
+// Expanded macro / micro / socioeconomic indicators, grouped by category.
+// Add more any time by adding a { id, label, placeholder } entry under a category.
 const MACRO_SERIES = [
-  { id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%" },
-  { id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%" },
-  { id: "UNRATE", label: "Unemployment", placeholder: "4.1%" },
-  { id: "GDP", label: "GDP Growth (QoQ)", placeholder: "2.5%" },
-  { id: "DGS10", label: "10-Year Yield", placeholder: "4.31%" },
-  { id: "DXY", label: "Dollar Index", placeholder: "104.2" },
+  { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T" },
+  { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T" },
+  { category: "Growth & Output", id: "INDPRO", label: "Industrial Production", placeholder: "103.2" },
+  { category: "Growth & Output", id: "RSAFS", label: "Retail Sales", placeholder: "$720B" },
+  { category: "Growth & Output", id: "PCE", label: "Personal Consumption", placeholder: "$19.8T" },
+
+  { category: "Prices & Inflation", id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%" },
+  { category: "Prices & Inflation", id: "CPILFESL", label: "Core CPI", placeholder: "3.0%" },
+  { category: "Prices & Inflation", id: "PPIACO", label: "Producer Price Index", placeholder: "254.1" },
+  { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T" },
+
+  { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%" },
+  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M" },
+  { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%" },
+  { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K" },
+  { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K" },
+  { category: "Labor & Socioeconomic", id: "UMCSENT", label: "Consumer Sentiment", placeholder: "68.5" },
+
+  { category: "Housing", id: "HOUST", label: "Housing Starts", placeholder: "1.35M" },
+  { category: "Housing", id: "MSPUS", label: "Median Home Sale Price", placeholder: "$420K" },
+  { category: "Housing", id: "MORTGAGE30US", label: "30-Yr Mortgage Rate", placeholder: "6.7%" },
+
+  { category: "Rates & Money", id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%" },
+  { category: "Rates & Money", id: "DGS2", label: "2-Year Yield", placeholder: "4.10%" },
+  { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%" },
+  { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%" },
 ];
 
 function fmtUsd(n, digits = 2) {
@@ -170,6 +193,12 @@ export default function TapeApp() {
     forex.data && `USD/JPY ${forex.data.JPY?.toFixed(2)}`,
   ].filter(Boolean);
 
+  const macroByCategory = {};
+  (macro.data || []).forEach((m) => {
+    if (!macroByCategory[m.category]) macroByCategory[m.category] = [];
+    macroByCategory[m.category].push(m);
+  });
+
   return (
     <div className="tape-root">
       <style>{`
@@ -201,6 +230,7 @@ export default function TapeApp() {
         .row-right .price { font-family:'IBM Plex Mono',monospace; font-size:14px; }
         .macro-live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-muted); margin-right:5px; }
         .macro-live-dot.live { background:var(--up); }
+        .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-muted); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
         .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
         .nav-btn { background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-family:'IBM Plex Mono',monospace; padding:4px 8px; cursor:pointer; }
         .nav-btn.active { color:var(--amber); }
@@ -255,21 +285,26 @@ export default function TapeApp() {
 
         {tab === "macro" && (
           <>
-            <SectionLabel eyebrow="United States">Macro & Socioeconomic</SectionLabel>
-            {macro.data?.map((m) => (
-              <div className="card-row" key={m.id}>
-                <div className="row-name">
-                  <span className={`macro-live-dot ${m.live ? "live" : ""}`} />
-                  <div>
-                    <div>{m.label}</div>
-                    <div className="sym">{m.id}</div>
+            <SectionLabel eyebrow="United States">Macro, Micro & Socioeconomic</SectionLabel>
+            {Object.keys(macroByCategory).map((cat) => (
+              <div key={cat}>
+                <div className="macro-cat">{cat}</div>
+                {macroByCategory[cat].map((m) => (
+                  <div className="card-row" key={m.id}>
+                    <div className="row-name">
+                      <span className={`macro-live-dot ${m.live ? "live" : ""}`} />
+                      <div>
+                        <div>{m.label}</div>
+                        <div className="sym">{m.id}</div>
+                      </div>
+                    </div>
+                    <div className="row-right"><div className="price">{m.value}</div></div>
                   </div>
-                </div>
-                <div className="row-right"><div className="price">{m.value}</div></div>
+                ))}
               </div>
             ))}
             <p className="empty-note">
-              Dots are amber = placeholder, green = live, once your FRED proxy is wired up.
+              Dots are amber = placeholder, green = live via your FRED proxy.
             </p>
           </>
         )}
