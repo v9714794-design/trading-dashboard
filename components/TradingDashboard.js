@@ -23,8 +23,6 @@ const METALS = [
   { symbol: "XAG", label: "Silver", unit: "oz" },
 ];
 
-// Expanded macro / micro / socioeconomic indicators, grouped by category.
-// Add more any time by adding a { id, label, placeholder } entry under a category.
 const MACRO_SERIES = [
   { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T" },
   { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T" },
@@ -53,6 +51,10 @@ const MACRO_SERIES = [
   { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%" },
   { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%" },
 ];
+
+const MACRO_OVERVIEW_IDS = ["GDP", "GDPC1", "CPIAUCSL", "FEDFUNDS", "DGS10", "T10Y2Y"];
+const SOCIO_OVERVIEW_IDS = ["UNRATE", "CIVPART", "PAYEMS", "MEHOINUSA672N", "UMCSENT", "ICSA"];
+const MICRO_OVERVIEW_IDS = ["RSAFS", "INDPRO", "PPIACO", "HOUST", "MSPUS", "MORTGAGE30US"];
 
 function fmtUsd(n, digits = 2) {
   if (n == null || Number.isNaN(n)) return "—";
@@ -119,6 +121,25 @@ function SectionLabel({ children, eyebrow }) {
       {eyebrow && <span className="eyebrow">{eyebrow}</span>}
       <h2>{children}</h2>
     </div>
+  );
+}
+
+function OverviewGrid({ title, ids, macroData }) {
+  return (
+    <>
+      <div className="macro-cat">{title}</div>
+      <div className="grid-2" style={{ marginBottom: 18 }}>
+        {ids.map((id) => {
+          const m = macroData?.find((x) => x.id === id);
+          return (
+            <div className="card" key={id}>
+              <div className="card-title">{m ? m.label : id}</div>
+              <div className="card-value">{m ? m.value : "…"}</div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -220,7 +241,7 @@ export default function TapeApp() {
         .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px; }
         .card-row { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .card-title { font-size:12px; color:var(--text-muted); margin-bottom:4px; }
-        .card-value { font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:500; }
+        .card-value { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:500; }
         .pill { font-family:'IBM Plex Mono',monospace; font-size:11px; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:5px; }
         .pill-up { color:var(--up); background:rgba(62,207,142,0.12); }
         .pill-down { color:var(--down); background:rgba(255,92,92,0.12); }
@@ -230,7 +251,7 @@ export default function TapeApp() {
         .row-right .price { font-family:'IBM Plex Mono',monospace; font-size:14px; }
         .macro-live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-muted); margin-right:5px; }
         .macro-live-dot.live { background:var(--up); }
-        .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-muted); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
+        .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
         .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
         .nav-btn { background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-family:'IBM Plex Mono',monospace; padding:4px 8px; cursor:pointer; }
         .nav-btn.active { color:var(--amber); }
@@ -286,6 +307,12 @@ export default function TapeApp() {
         {tab === "macro" && (
           <>
             <SectionLabel eyebrow="United States">Macro, Micro & Socioeconomic</SectionLabel>
+
+            <OverviewGrid title="Macro Overview" ids={MACRO_OVERVIEW_IDS} macroData={macro.data} />
+            <OverviewGrid title="Socioeconomic Overview" ids={SOCIO_OVERVIEW_IDS} macroData={macro.data} />
+            <OverviewGrid title="Micro Overview" ids={MICRO_OVERVIEW_IDS} macroData={macro.data} />
+
+            <div className="macro-cat">Full Breakdown</div>
             {Object.keys(macroByCategory).map((cat) => (
               <div key={cat}>
                 <div className="macro-cat">{cat}</div>
