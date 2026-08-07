@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     url.searchParams.set("api_key", apiKey);
     url.searchParams.set("file_type", "json");
     url.searchParams.set("sort_order", "desc");
-    url.searchParams.set("limit", "1");
+    url.searchParams.set("limit", "2");
 
     const fredRes = await fetch(url.toString());
     if (!fredRes.ok) {
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     }
 
     const data = await fredRes.json();
-    const latest = data.observations?.[0];
+    const [latest, previous] = data.observations || [];
 
     if (!latest) {
       res.status(404).json({ error: `No observations found for series ${series}` });
@@ -36,11 +36,21 @@ export default async function handler(req, res) {
     }
 
     const value = latest.value === "." ? null : latest.value;
+    const prevValue = previous && previous.value !== "." ? previous.value : null;
+
+    let trend = "flat";
+    if (value != null && prevValue != null) {
+      const diff = parseFloat(value) - parseFloat(prevValue);
+      if (diff > 0) trend = "up";
+      else if (diff < 0) trend = "down";
+    }
 
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
     res.status(200).json({
       series,
       value,
+      prevValue,
+      trend,
       date: latest.date,
       units: data.units || undefined,
     });
