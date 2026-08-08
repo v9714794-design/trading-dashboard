@@ -680,7 +680,7 @@ export default function TapeApp() {
         .live-pulse { width:7px; height:7px; border-radius:50%; background:var(--up); box-shadow:0 0 0 0 rgba(51,209,126,0.6); animation:pulse 2s infinite; }
         @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(51,209,126,0.5);} 70%{box-shadow:0 0 0 7px rgba(51,209,126,0);} 100%{box-shadow:0 0 0 0 rgba(51,209,126,0);} }
         @media (prefers-reduced-motion: reduce) { .live-pulse { animation:none; } }
-        .app-header h1 { font-size:22px; font-weight:700; letter-spacing:0.08em; margin:0; background:linear-gradient(90deg,var(--text),var(--amber)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .app-header h1 { font-size:16.5px; font-weight:700; letter-spacing:0.04em; margin:0; white-space:nowrap; background:linear-gradient(90deg,var(--text),var(--amber)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
         .brand-tag { font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-muted); letter-spacing:0.14em; margin-top:2px; }
         .app-header .sub { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; }
         .user-chip { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.04em; padding:5px 11px; border-radius:20px; border:1px solid var(--border); background:var(--panel-hi); color:var(--text-muted); cursor:pointer; transition:transform 0.12s ease, border-color 0.12s ease; }
@@ -779,9 +779,9 @@ export default function TapeApp() {
           <div>
             <div className="brand-row" style={{ gap: 6 }}>
               <span className="live-pulse" />
-              <h1>TAPE</h1>
+              <h1>MACRO TERMINAL</h1>
             </div>
-            <div className="brand-tag">MACRO &amp; MARKETS TERMINAL</div>
+            <div className="brand-tag">BY VINAY</div>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
@@ -807,7 +807,7 @@ export default function TapeApp() {
             <div className="drawer-head">
               <div className="brand-row" style={{ gap: 6 }}>
                 <span className="live-pulse" />
-                <h1 style={{ fontSize: 18 }}>TAPE</h1>
+                <h1 style={{ fontSize: 16 }}>MACRO TERMINAL</h1>
               </div>
               <button className="icon-btn" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={18} /></button>
             </div>

@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const system = `You are the built-in macro assistant for a personal trading dashboard called TAPE.
+  const system = `You are the built-in macro assistant for Macro Terminal by Vinay, a personal trading dashboard.
 Answer the user's question using ONLY the JSON snapshot of live dashboard data provided below —
 this is the current state of the dashboard the user is looking at right now.
 Rules:
