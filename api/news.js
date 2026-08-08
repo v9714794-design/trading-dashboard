@@ -6,6 +6,36 @@ const REGIONS = {
   "Asia-Pacific": ["china", "taiwan", "japan", "asia", "beijing", "korea", "india"],
 };
 
+// GDELT's edge often drops requests from cloud/datacenter IPs (like Vercel's)
+// that arrive without a browser-like User-Agent — this shows up as a raw
+// "TypeError: fetch failed" with no HTTP status at all. Sending a UA fixes
+// most of it; a short timeout + one retry covers the rest (GDELT is
+// occasionally just slow).
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; TapeDashboard/1.0; +https://vercel.com)",
+        Accept: "application/json",
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchGdelt(url) {
+  try {
+    return await fetchWithTimeout(url, 8000);
+  } catch (e) {
+    // one retry on transient network/timeout failure
+    return await fetchWithTimeout(url, 8000);
+  }
+}
+
 export default async function handler(req, res) {
   try {
     const query = encodeURIComponent(
@@ -13,7 +43,7 @@ export default async function handler(req, res) {
     );
     const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=artlist&maxrecords=20&format=json&sort=hybridrel&timespan=24h`;
 
-    const r = await fetch(url);
+    const r = await fetchGdelt(url);
     if (!r.ok) throw new Error(`GDELT request failed with status ${r.status}`);
     const data = await r.json();
 
@@ -49,6 +79,6 @@ export default async function handler(req, res) {
       regionRisk,
     });
   } catch (err) {
-    res.status(500).json({ error: "Unexpected error fetching news", detail: String(err) });
+    res.status(502).json({ error: "Unexpected error fetching news", detail: String(err) });
   }
 }
