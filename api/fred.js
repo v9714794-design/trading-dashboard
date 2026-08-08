@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const { series } = req.query;
+  const { series, transform } = req.query;
 
   if (!series) {
     res.status(400).json({ error: "Missing required query param: series (e.g. ?series=FEDFUNDS)" });
@@ -13,6 +13,57 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (transform === "yoy") {
+      // Year-over-year % change — needs this month + same month a year ago,
+      // plus the prior month's pair too, so we can tell whether the YoY rate
+      // itself is accelerating (trend) rather than just up/down on the index.
+      const url = new URL("https://api.stlouisfed.org/fred/series/observations");
+      url.searchParams.set("series_id", series);
+      url.searchParams.set("api_key", apiKey);
+      url.searchParams.set("file_type", "json");
+      url.searchParams.set("sort_order", "desc");
+      url.searchParams.set("limit", "14");
+
+      const fredRes = await fetch(url.toString());
+      if (!fredRes.ok) {
+        const text = await fredRes.text();
+        res.status(fredRes.status).json({ error: "FRED request failed", detail: text });
+        return;
+      }
+      const data = await fredRes.json();
+      const obs = (data.observations || []).filter((o) => o.value !== ".");
+      if (obs.length < 13) {
+        res.status(404).json({ error: `Not enough observations for ${series} to compute YoY` });
+        return;
+      }
+
+      const yoyAt = (i) => {
+        const now = parseFloat(obs[i].value);
+        const prior = parseFloat(obs[i + 12].value);
+        return ((now - prior) / prior) * 100;
+      };
+
+      const yoyLatest = yoyAt(0);
+      const yoyPrev = obs.length >= 14 ? yoyAt(1) : null;
+
+      let trend = "flat";
+      if (yoyPrev != null) {
+        if (yoyLatest > yoyPrev) trend = "up";
+        else if (yoyLatest < yoyPrev) trend = "down";
+      }
+
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+      res.status(200).json({
+        series,
+        value: yoyLatest.toFixed(2),
+        prevValue: yoyPrev != null ? yoyPrev.toFixed(2) : null,
+        trend,
+        date: obs[0].date,
+        transform: "yoy",
+      });
+      return;
+    }
+
     const url = new URL("https://api.stlouisfed.org/fred/series/observations");
     url.searchParams.set("series_id", series);
     url.searchParams.set("api_key", apiKey);

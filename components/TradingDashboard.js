@@ -42,39 +42,60 @@ const METALS = [
 ];
 
 const MACRO_SERIES = [
-  { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T", sense: "up-bull" },
-  { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T", sense: "up-bull" },
-  { category: "Growth & Output", id: "INDPRO", label: "Industrial Production", placeholder: "103.2", sense: "up-bull" },
-  { category: "Growth & Output", id: "RSAFS", label: "Retail Sales", placeholder: "$720B", sense: "up-bull" },
-  { category: "Growth & Output", id: "PCE", label: "Personal Consumption", placeholder: "$19.8T", sense: "up-bull" },
+  { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T", sense: "up-bull", format: "trillions" },
+  { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T", sense: "up-bull", format: "trillions" },
+  { category: "Growth & Output", id: "INDPRO", label: "Industrial Production", placeholder: "103.2", sense: "up-bull", format: "index" },
+  { category: "Growth & Output", id: "RSAFS", label: "Retail Sales", placeholder: "$720B", sense: "up-bull", format: "billionsFromMillions" },
+  { category: "Growth & Output", id: "PCE", label: "Personal Consumption", placeholder: "$19.8T", sense: "up-bull", format: "trillions" },
 
-  { category: "Prices & Inflation", id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%", sense: "up-bear" },
-  { category: "Prices & Inflation", id: "CPILFESL", label: "Core CPI", placeholder: "3.0%", sense: "up-bear" },
-  { category: "Prices & Inflation", id: "PPIACO", label: "Producer Price Index", placeholder: "254.1", sense: "up-bear" },
-  { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T", sense: "up-bull" },
+  { category: "Prices & Inflation", id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%", sense: "up-bear", format: "percent", yoy: true },
+  { category: "Prices & Inflation", id: "CPILFESL", label: "Core CPI (YoY)", placeholder: "3.0%", sense: "up-bear", format: "percent", yoy: true },
+  { category: "Prices & Inflation", id: "PPIACO", label: "Producer Price Index", placeholder: "254.1", sense: "up-bear", format: "index" },
+  { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T", sense: "up-bull", format: "trillionsFromBillions" },
 
-  { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%", sense: "up-bear" },
-  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M", sense: "up-bull" },
-  { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%", sense: "up-bull" },
-  { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K", sense: "up-bear" },
-  { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K", sense: "up-bull" },
-  { category: "Labor & Socioeconomic", id: "UMCSENT", label: "Consumer Sentiment", placeholder: "68.5", sense: "up-bull" },
+  { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%", sense: "up-bear", format: "percent" },
+  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M", sense: "up-bull", format: "millionsFromThousands" },
+  { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%", sense: "up-bull", format: "percent" },
+  { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K", sense: "up-bear", format: "thousandsK" },
+  { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K", sense: "up-bull", format: "dollar" },
+  { category: "Labor & Socioeconomic", id: "UMCSENT", label: "Consumer Sentiment", placeholder: "68.5", sense: "up-bull", format: "index" },
 
-  { category: "Housing", id: "HOUST", label: "Housing Starts", placeholder: "1.35M", sense: "up-bull" },
-  { category: "Housing", id: "MSPUS", label: "Median Home Sale Price", placeholder: "$420K", sense: "up-bull" },
-  { category: "Housing", id: "MORTGAGE30US", label: "30-Yr Mortgage Rate", placeholder: "6.7%", sense: "up-bear" },
+  { category: "Housing", id: "HOUST", label: "Housing Starts", placeholder: "1.35M", sense: "up-bull", format: "millionsFromThousands" },
+  { category: "Housing", id: "MSPUS", label: "Median Home Sale Price", placeholder: "$420K", sense: "up-bull", format: "dollar" },
+  { category: "Housing", id: "MORTGAGE30US", label: "30-Yr Mortgage Rate", placeholder: "6.7%", sense: "up-bear", format: "percent" },
 
-  { category: "Rates & Money", id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%", sense: "up-bear" },
-  { category: "Rates & Money", id: "DGS2", label: "2-Year Yield", placeholder: "4.10%", sense: "up-bear" },
-  { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%", sense: "up-bear" },
-  { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%", sense: "curve" },
+  { category: "Rates & Money", id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%", sense: "up-bear", format: "percent" },
+  { category: "Rates & Money", id: "DGS2", label: "2-Year Yield", placeholder: "4.10%", sense: "up-bear", format: "percent" },
+  { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%", sense: "up-bear", format: "percent" },
+  { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%", sense: "curve", format: "percent" },
 
-  { category: "Banking & Liquidity", id: "STLFSI4", label: "Financial Stress Index", placeholder: "-0.30", sense: "up-bear" },
-  { category: "Banking & Liquidity", id: "WALCL", label: "Fed Balance Sheet", placeholder: "$6.9T", sense: "up-bull" },
-  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B", sense: "up-bear" },
-  { category: "Banking & Liquidity", id: "WRESBAL", label: "Bank Reserve Balances", placeholder: "$3.2T", sense: "up-bull" },
-  { category: "Banking & Liquidity", id: "SOFR", label: "SOFR (overnight funding)", placeholder: "4.30%", sense: "up-bear" },
+  { category: "Banking & Liquidity", id: "STLFSI4", label: "Financial Stress Index", placeholder: "-0.30", sense: "up-bear", format: "decimal2" },
+  { category: "Banking & Liquidity", id: "WALCL", label: "Fed Balance Sheet", placeholder: "$6.9T", sense: "up-bull", format: "trillionsFromMillions" },
+  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B", sense: "up-bear", format: "billionsFromMillions" },
+  { category: "Banking & Liquidity", id: "WRESBAL", label: "Bank Reserve Balances", placeholder: "$3.2T", sense: "up-bull", format: "trillionsFromMillions" },
+  { category: "Banking & Liquidity", id: "SOFR", label: "SOFR (overnight funding)", placeholder: "4.30%", sense: "up-bear", format: "percent" },
 ];
+
+// Turns a raw FRED value (a string, sometimes with many trailing decimal
+// digits, in whatever unit that series happens to use — millions, thousands,
+// raw dollars, etc.) into a clean, human display string.
+function formatMacroValue(fmt, raw) {
+  const n = parseFloat(raw);
+  if (Number.isNaN(n)) return raw;
+  switch (fmt) {
+    case "percent": return `${n.toFixed(2)}%`;
+    case "decimal2": return n.toFixed(2);
+    case "index": return n.toFixed(1);
+    case "trillions": return `$${(n / 1000).toFixed(2)}T`;
+    case "trillionsFromMillions": return `$${(n / 1e6).toFixed(2)}T`;
+    case "trillionsFromBillions": return `$${(n / 1000).toFixed(2)}T`;
+    case "billionsFromMillions": return `$${(n / 1000).toFixed(1)}B`;
+    case "millionsFromThousands": return `${(n / 1000).toFixed(2)}M`;
+    case "thousandsK": return `${Math.round(n).toLocaleString()}`;
+    case "dollar": return `$${Math.round(n).toLocaleString()}`;
+    default: return raw;
+  }
+}
 
 // Given a merged macro series object ({ id, value, trend, sense }), return a
 // Bullish / Bearish / Neutral read. "up-bull" = rising is constructive for
@@ -408,12 +429,15 @@ export default function TapeApp() {
     const results = await Promise.all(
       MACRO_SERIES.map(async (s) => {
         try {
-          const res = await fetch(`${MACRO_API_BASE}/api/fred?series=${s.id}`);
+          const qs = s.yoy ? `series=${s.id}&transform=yoy` : `series=${s.id}`;
+          const res = await fetch(`${MACRO_API_BASE}/api/fred?${qs}`);
           if (!res.ok) throw new Error("no proxy");
           const json = await res.json();
-          return { ...s, value: json.value ?? s.placeholder, trend: json.trend ?? "flat", live: true };
+          if (json.value == null) throw new Error("no value");
+          const displayValue = s.yoy ? `${parseFloat(json.value).toFixed(2)}%` : formatMacroValue(s.format, json.value);
+          return { ...s, value: displayValue, raw: json.value, trend: json.trend ?? "flat", live: true };
         } catch {
-          return { ...s, value: s.placeholder, trend: "flat", live: false };
+          return { ...s, value: s.placeholder, raw: null, trend: "flat", live: false };
         }
       })
     );
