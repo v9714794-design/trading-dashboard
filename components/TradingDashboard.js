@@ -5,7 +5,7 @@ import {
 import {
   TrendingUp, TrendingDown, Bitcoin, Landmark,
   CircleDollarSign, Gem, LayoutGrid, Compass, Building2,
-  Gauge, Globe2, Newspaper,
+  Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send,
 } from "lucide-react";
 
 const MACRO_API_BASE = "";
@@ -84,6 +84,49 @@ const REGIME_MAP = {
     name: "Deflationary Bust",
     bias: "Growth and inflation both falling — classic risk-off, flight to quality.",
     equities: "Defensive", bonds: "Constructive", commodities: "Soft", usd: "Firmer (safe-haven)",
+  },
+};
+
+// 2026 FOMC statement days (day 2 of each 2-day meeting), confirmed via federalreserve.gov
+const FOMC_2026 = [
+  { date: "2026-01-28", sep: false },
+  { date: "2026-03-18", sep: true },
+  { date: "2026-04-29", sep: false },
+  { date: "2026-06-17", sep: true },
+  { date: "2026-07-29", sep: false },
+  { date: "2026-09-16", sep: true },
+  { date: "2026-10-28", sep: false },
+  { date: "2026-12-09", sep: true },
+];
+
+// 2026 CPI release days. Jul/Aug confirmed via bls.gov; remaining months are
+// projected off the BLS second-week pattern and may shift slightly.
+const CPI_2026 = [
+  { date: "2026-08-12", confirmed: true },
+  { date: "2026-09-15", confirmed: false },
+  { date: "2026-10-14", confirmed: false },
+  { date: "2026-11-13", confirmed: false },
+  { date: "2026-12-15", confirmed: false },
+];
+
+const FED_ASSET_IMPACT = {
+  Hawkish: {
+    Gold: "Headwind — higher real yields compete with non-yielding gold",
+    "BTC / Crypto": "Headwind — tighter liquidity pressures risk assets",
+    "US Dollar": "Supportive — wider rate differentials favor the dollar",
+    "Growth equities": "Headwind — higher discount rates pressure valuations",
+  },
+  Dovish: {
+    Gold: "Tailwind — falling real yields support gold",
+    "BTC / Crypto": "Tailwind — easier liquidity supports risk assets",
+    "US Dollar": "Headwind — narrowing rate differentials",
+    "Growth equities": "Tailwind — lower discount rates support valuations",
+  },
+  "Neutral / Data-dependent": {
+    Gold: "Mixed — no clear rate-driven bias right now",
+    "BTC / Crypto": "Mixed — no clear rate-driven bias right now",
+    "US Dollar": "Mixed — no clear rate-driven bias right now",
+    "Growth equities": "Mixed — no clear rate-driven bias right now",
   },
 };
 
@@ -182,6 +225,9 @@ function OverviewGrid({ title, ids, macroData }) {
 export default function TapeApp() {
   const [tab, setTab] = useState("overview");
   const [history, setHistory] = useState({});
+  const [askQuestion, setAskQuestion] = useState("");
+  const [askLog, setAskLog] = useState([]);
+  const [askLoading, setAskLoading] = useState(false);
 
   const pushHistory = useCallback((key, value) => {
     setHistory((h) => {
@@ -217,6 +263,7 @@ export default function TapeApp() {
     const res = await fetch("https://api.frankfurter.dev/v2/latest?base=USD");
     if (!res.ok) throw new Error("forex feed unavailable");
     const json = await res.json();
+    if (json.rates?.EUR) pushHistory("fx:EURUSD", 1 / json.rates.EUR);
     return json.rates;
   }, 5 * 60000, []);
 
@@ -296,6 +343,120 @@ export default function TapeApp() {
     : null;
   const sentimentLabel = sentimentScore == null ? "…" : sentimentScore < 40 ? "Fear / Risk-Off" : sentimentScore > 60 ? "Greed / Risk-On" : "Neutral";
 
+  // ---- Fed Hawk-Dove meter ----
+  const dgs2 = macro.data?.find((m) => m.id === "DGS2");
+  const stlfsi = macro.data?.find((m) => m.id === "STLFSI4");
+  const fedFundsTrendScore = fedFunds?.trend === "up" ? 1 : fedFunds?.trend === "down" ? -1 : 0;
+  const dgs2TrendScore = dgs2?.trend === "up" ? 1 : dgs2?.trend === "down" ? -1 : 0;
+  const cpiTrendScore = cpi?.trend === "up" ? 1 : cpi?.trend === "down" ? -1 : 0;
+  const stressTrendScore = stlfsi?.trend === "up" ? -1 : stlfsi?.trend === "down" ? 1 : 0;
+  const hawkAvg = (fedFundsTrendScore + dgs2TrendScore + cpiTrendScore + stressTrendScore) / 4;
+  const hawkScore = Math.round(50 + hawkAvg * 50);
+  const hawkLabel = hawkScore >= 65 ? "Hawkish" : hawkScore <= 35 ? "Dovish" : "Neutral / Data-dependent";
+
+  const today = new Date();
+  const nextFomc = FOMC_2026.map((f) => ({ ...f, d: new Date(f.date) })).find((f) => f.d >= today) || null;
+  const daysToFomc = nextFomc ? Math.ceil((nextFomc.d - today) / 86400000) : null;
+  const nextCpi = CPI_2026.map((c) => ({ ...c, d: new Date(c.date) })).find((c) => c.d >= today) || null;
+  const daysToCpi = nextCpi ? Math.ceil((nextCpi.d - today) / 86400000) : null;
+
+  // ---- Bull/Bear confluence engine ----
+  const walcl = macro.data?.find((m) => m.id === "WALCL");
+  const rrp = macro.data?.find((m) => m.id === "RRPONTSYD");
+  const liquiditySignRaw = (walcl?.trend === "up" ? 1 : walcl?.trend === "down" ? -1 : 0)
+    + (rrp?.trend === "down" ? 1 : rrp?.trend === "up" ? -1 : 0);
+  const liquiditySign = liquiditySignRaw > 0 ? 1 : liquiditySignRaw < 0 ? -1 : 0;
+  const liquidityNote = `Fed B/S ${walcl?.trend || "flat"}, RRP ${rrp?.trend || "flat"}`;
+
+  const eurusdHist = history["fx:EURUSD"];
+  const usdStrengthening = eurusdHist && eurusdHist.length >= 2
+    ? eurusdHist[eurusdHist.length - 1] < eurusdHist[0]
+    : null;
+
+  const newsRiskScore = news.data?.riskScore;
+  const riskOffScore = newsRiskScore == null ? 0 : newsRiskScore > 65 ? -1 : newsRiskScore < 35 ? 1 : 0;
+  const riskHavenScore = newsRiskScore == null ? 0 : newsRiskScore > 65 ? 1 : newsRiskScore < 35 ? -1 : 0;
+
+  function factor(label, value, note) {
+    return { label, value, note: note ?? "—" };
+  }
+
+  function buildConfluence(name, factors) {
+    const score = factors.reduce((s, f) => s + f.value, 0);
+    const pct = Math.round(50 + (score / factors.length) * 50);
+    const bias = pct >= 60 ? "Bullish" : pct <= 40 ? "Bearish" : "Neutral";
+    return { name, pct, bias, factors };
+  }
+
+  const btcConfluence = buildConfluence("BTC / Crypto", [
+    factor("Fed stance", hawkLabel === "Dovish" ? 1 : hawkLabel === "Hawkish" ? -1 : 0, hawkLabel),
+    factor("Liquidity (Fed B/S − RRP)", liquiditySign, liquidityNote),
+    factor("Yield curve", curveInverted ? -1 : 0, curveInverted ? "Inverted — risk-off pressure" : "Normal"),
+    factor("24h momentum", btcMomentum > 0 ? 1 : btcMomentum < 0 ? -1 : 0, btc ? `${btcMomentum.toFixed(2)}%` : "—"),
+    factor("Geopolitical risk", riskOffScore, news.data ? `Risk score ${news.data.riskScore}` : "—"),
+  ]);
+
+  const goldConfluence = buildConfluence("Gold (XAU)", [
+    factor("Fed stance", hawkLabel === "Dovish" ? 1 : hawkLabel === "Hawkish" ? -1 : 0, hawkLabel),
+    factor("2Y yield (real-rate proxy)", dgs2?.trend === "up" ? -1 : dgs2?.trend === "down" ? 1 : 0, dgs2 ? dgs2.value : "—"),
+    factor("Inflation trend", cpiTrendScore, cpi ? `CPI ${cpi.value}` : "—"),
+    factor("US Dollar direction", usdStrengthening === true ? -1 : usdStrengthening === false ? 1 : 0, eurusd ? `EUR/USD ${eurusd.toFixed(4)}` : "—"),
+    factor("Safe-haven bid", riskHavenScore, news.data ? `Risk score ${news.data.riskScore}` : "—"),
+  ]);
+
+  const usdConfluence = buildConfluence("US Dollar", [
+    factor("Fed stance", hawkLabel === "Hawkish" ? 1 : hawkLabel === "Dovish" ? -1 : 0, hawkLabel),
+    factor("2Y yield direction", dgs2?.trend === "up" ? 1 : dgs2?.trend === "down" ? -1 : 0, dgs2 ? dgs2.value : "—"),
+    factor("Yield curve", curveInverted ? -1 : 0, curveInverted ? "Inverted" : "Normal"),
+    factor("Safe-haven bid", riskHavenScore, news.data ? `Risk score ${news.data.riskScore}` : "—"),
+    factor("Global liquidity", -liquiditySign, liquidityNote),
+  ]);
+
+  const bondsConfluence = buildConfluence("US 10Y Treasuries (price)", [
+    factor("Fed stance", hawkLabel === "Dovish" ? 1 : hawkLabel === "Hawkish" ? -1 : 0, hawkLabel),
+    factor("Inflation trend", cpi?.trend === "down" ? 1 : cpi?.trend === "up" ? -1 : 0, cpi ? `CPI ${cpi.value}` : "—"),
+    factor("Growth trend", growthState === "Contracting" ? 1 : growthState === "Expanding" ? -1 : 0, growthState || "—"),
+    factor("Financial stress", stlfsi?.trend === "up" ? 1 : stlfsi?.trend === "down" ? -1 : 0, stlfsi ? stlfsi.value : "—"),
+  ]);
+
+  const confluenceBoard = [btcConfluence, goldConfluence, usdConfluence, bondsConfluence];
+
+  async function askAI() {
+    if (!askQuestion.trim() || askLoading) return;
+    const q = askQuestion.trim();
+    setAskLog((log) => [...log, { role: "user", text: q }]);
+    setAskQuestion("");
+    setAskLoading(true);
+    try {
+      const context = {
+        fedFundsRate: fedFunds?.value,
+        fedStance: hawkLabel,
+        cpi: cpi?.value,
+        curve10y2y: curve?.value,
+        curveInverted,
+        btcPrice: btc?.current_price,
+        btcMomentum24h: btcMomentum,
+        goldPrice: xau?.price,
+        eurUsd: eurusd,
+        macroRegime: regime?.name,
+        sentimentScore,
+        geopoliticalRiskScore: newsRiskScore,
+        confluence: confluenceBoard.map((c) => ({ name: c.name, bias: c.bias, score: c.pct })),
+      };
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, context }),
+      });
+      const json = await res.json();
+      setAskLog((log) => [...log, { role: "ai", text: json.answer || json.error || "No response." }]);
+    } catch (e) {
+      setAskLog((log) => [...log, { role: "ai", text: `Error: ${e.message}` }]);
+    } finally {
+      setAskLoading(false);
+    }
+  }
+
   return (
     <div className="tape-root">
       <style>{`
@@ -349,6 +510,29 @@ export default function TapeApp() {
         .region-tag.High { color:var(--down); background:rgba(255,92,92,0.12); }
         .region-tag.Medium { color:var(--amber); background:rgba(240,162,2,0.12); }
         .region-tag.Low { color:var(--up); background:rgba(62,207,142,0.12); }
+        .factor-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+        .factor-row:last-child { border-bottom:none; }
+        .factor-tag { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 8px; border-radius:20px; flex:none; margin-left:8px; }
+        .factor-tag.bull { color:var(--up); background:rgba(62,207,142,0.12); }
+        .factor-tag.bear { color:var(--down); background:rgba(255,92,92,0.12); }
+        .factor-tag.neu { color:var(--text-muted); background:rgba(122,130,144,0.12); }
+        .confluence-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; }
+        .confluence-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .confluence-head .cname { font-weight:600; font-size:14px; }
+        .confluence-bar-track { height:6px; border-radius:4px; background:var(--border); overflow:hidden; margin-bottom:10px; }
+        .confluence-bar-fill { height:100%; border-radius:4px; }
+        .event-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+        .event-row:last-child { border-bottom:none; }
+        .event-name { font-size:13px; }
+        .event-days { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); }
+        .event-days.soon { color:var(--down); }
+        .chat-log { display:flex; flex-direction:column; gap:10px; margin:10px 0 70px; }
+        .chat-bubble { border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; max-width:88%; }
+        .chat-bubble.user { align-self:flex-end; background:rgba(240,162,2,0.12); border:1px solid rgba(240,162,2,0.3); }
+        .chat-bubble.ai { align-self:flex-start; background:var(--panel); border:1px solid var(--border); white-space:pre-wrap; }
+        .chat-input-row { position:fixed; bottom:56px; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; gap:8px; padding:8px 16px; background:var(--bg); border-top:1px solid var(--border); }
+        .chat-input-row input { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:13px; }
+        .chat-input-row button { background:var(--amber); border:none; border-radius:8px; padding:0 14px; display:flex; align-items:center; justify-content:center; color:#000; cursor:pointer; }
       `}</style>
 
       <div className="ticker-wrap">
@@ -492,6 +676,21 @@ export default function TapeApp() {
         {tab === "banks" && (
           <>
             <SectionLabel eyebrow="Live via FRED">Banking & Liquidity</SectionLabel>
+            <div className="macro-cat">Event Risk</div>
+            <div className="card" style={{ marginBottom: 14 }}>
+              <div className="event-row">
+                <div className="event-name">Next FOMC decision {nextFomc?.sep ? "(w/ dot plot)" : ""}</div>
+                <div className={`event-days ${daysToFomc != null && daysToFomc <= 3 ? "soon" : ""}`}>
+                  {nextFomc ? `${daysToFomc}d — ${nextFomc.date}` : "—"}
+                </div>
+              </div>
+              <div className="event-row">
+                <div className="event-name">Next CPI print {nextCpi && !nextCpi.confirmed ? "(projected)" : ""}</div>
+                <div className={`event-days ${daysToCpi != null && daysToCpi <= 3 ? "soon" : ""}`}>
+                  {nextCpi ? `${daysToCpi}d — ${nextCpi.date}` : "—"}
+                </div>
+              </div>
+            </div>
             <OverviewGrid title="Banking Stress Overview" ids={BANKS_OVERVIEW_IDS} macroData={macro.data} />
             <div className="macro-cat">Detail</div>
             {(macroByCategory["Banking & Liquidity"] || []).map((m) => (
@@ -509,7 +708,8 @@ export default function TapeApp() {
             <div className="disclaimer">
               Financial Stress Index (STLFSI4), Fed balance sheet, overnight reverse repo, bank reserve
               balances, and SOFR are real, official series from the St. Louis Fed — this tab isn't a
-              heuristic, unlike Regime and Sentiment.
+              heuristic, unlike Regime and Sentiment. FOMC dates are official; CPI dates beyond the
+              confirmed release are BLS's typical second-week pattern and may shift.
             </div>
           </>
         )}
@@ -642,18 +842,137 @@ export default function TapeApp() {
             ))}
           </>
         )}
+
+        {tab === "fed" && (
+          <>
+            <SectionLabel eyebrow="Built from FRED trend directions">Fed Hawk-Dove Meter</SectionLabel>
+            <div className="card score-dial">
+              <div className="num" style={{ color: hawkLabel === "Hawkish" ? "var(--down)" : hawkLabel === "Dovish" ? "var(--up)" : "var(--amber)" }}>
+                {hawkScore}
+              </div>
+              <div className="lbl">{hawkLabel}</div>
+            </div>
+
+            <div className="macro-cat">Next FOMC Decision</div>
+            <div className="card">
+              <div className="card-title">{nextFomc ? `${nextFomc.date}${nextFomc.sep ? " (with dot plot)" : ""}` : "No date on file"}</div>
+              <div className="card-value" style={{ fontSize: 15 }}>{daysToFomc != null ? `${daysToFomc} day${daysToFomc === 1 ? "" : "s"} away` : "—"}</div>
+            </div>
+
+            <div className="macro-cat">What's feeding the score</div>
+            <div className="card">
+              <div className="factor-row">
+                <div>Fed funds rate trend</div>
+                <span className={`factor-tag ${fedFundsTrendScore > 0 ? "bear" : fedFundsTrendScore < 0 ? "bull" : "neu"}`}>{fedFunds?.trend ?? "flat"}</span>
+              </div>
+              <div className="factor-row">
+                <div>2Y Treasury yield trend</div>
+                <span className={`factor-tag ${dgs2TrendScore > 0 ? "bear" : dgs2TrendScore < 0 ? "bull" : "neu"}`}>{dgs2?.trend ?? "flat"}</span>
+              </div>
+              <div className="factor-row">
+                <div>CPI trend</div>
+                <span className={`factor-tag ${cpiTrendScore > 0 ? "bear" : cpiTrendScore < 0 ? "bull" : "neu"}`}>{cpi?.trend ?? "flat"}</span>
+              </div>
+              <div className="factor-row">
+                <div>Financial stress trend</div>
+                <span className={`factor-tag ${stressTrendScore < 0 ? "bear" : stressTrendScore > 0 ? "bull" : "neu"}`}>{stlfsi?.trend ?? "flat"}</span>
+              </div>
+            </div>
+
+            <div className="macro-cat">Asset Impact ({hawkLabel})</div>
+            {Object.entries(FED_ASSET_IMPACT[hawkLabel]).map(([asset, note]) => (
+              <div className="card-row" key={asset}>
+                <div className="row-name"><div>{asset}</div></div>
+                <div className="row-right" style={{ maxWidth: 190, fontSize: 12, textAlign: "right" }}>{note}</div>
+              </div>
+            ))}
+
+            <div className="disclaimer">
+              A simple 4-factor average of Fed funds rate, 2Y yield, CPI, and financial-stress trend
+              directions from FRED — not the CME FedWatch tool and not an official rate-probability
+              model. Treat this as a quick directional read, not a forecast.
+            </div>
+          </>
+        )}
+
+        {tab === "confluence" && (
+          <>
+            <SectionLabel eyebrow="Weighted factor scoring">Bull / Bear Confluence</SectionLabel>
+            {confluenceBoard.map((c) => (
+              <div className="confluence-card" key={c.name}>
+                <div className="confluence-head">
+                  <div className="cname">{c.name}</div>
+                  <span className={`factor-tag ${c.bias === "Bullish" ? "bull" : c.bias === "Bearish" ? "bear" : "neu"}`}>{c.bias} · {c.pct}</span>
+                </div>
+                <div className="confluence-bar-track">
+                  <div
+                    className="confluence-bar-fill"
+                    style={{
+                      width: `${c.pct}%`,
+                      background: c.bias === "Bullish" ? "var(--up)" : c.bias === "Bearish" ? "var(--down)" : "var(--amber)",
+                    }}
+                  />
+                </div>
+                {c.factors.map((f) => (
+                  <div className="factor-row" key={f.label}>
+                    <div>{f.label} <span style={{ color: "var(--text-muted)", fontSize: 11 }}>· {f.note}</span></div>
+                    <span className={`factor-tag ${f.value > 0 ? "bull" : f.value < 0 ? "bear" : "neu"}`}>
+                      {f.value > 0 ? "Bull" : f.value < 0 ? "Bear" : "Neutral"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="disclaimer">
+              Each score averages 4-5 macro factors already on this dashboard (Fed stance, yields,
+              inflation, liquidity, momentum, geopolitical risk) into a 0-100 bull/bear read per asset.
+              This is an educational framework I built, not a trading signal — nowhere close to a
+              proprietary multi-factor confluence engine, and not investment advice.
+            </div>
+          </>
+        )}
+
+        {tab === "ask" && (
+          <>
+            <SectionLabel eyebrow="Answers from what's on screen right now">Ask AI</SectionLabel>
+            <p className="empty-note">Ask about the live data in this dashboard — Fed stance, regime, sentiment, confluence, geopolitical risk. Needs ANTHROPIC_API_KEY set on the server.</p>
+            <div className="chat-log">
+              {askLog.map((m, i) => (
+                <div className={`chat-bubble ${m.role === "user" ? "user" : "ai"}`} key={i}>{m.text}</div>
+              ))}
+              {askLoading && <div className="chat-bubble ai">thinking…</div>}
+            </div>
+          </>
+        )}
       </div>
+
+      {tab === "ask" && (
+        <div className="chat-input-row">
+          <input
+            type="text"
+            placeholder="e.g. Is the Fed leaning hawkish right now?"
+            value={askQuestion}
+            onChange={(e) => setAskQuestion(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") askAI(); }}
+          />
+          <button onClick={askAI} disabled={askLoading}><Send size={16} /></button>
+        </div>
+      )}
+
 
       <div className="bottom-nav">
         <button className={`nav-btn ${tab === "overview" ? "active" : ""}`} onClick={() => setTab("overview")}><LayoutGrid size={16} /> OVERVIEW</button>
         <button className={`nav-btn ${tab === "macro" ? "active" : ""}`} onClick={() => setTab("macro")}><Landmark size={16} /> MACRO</button>
         <button className={`nav-btn ${tab === "regime" ? "active" : ""}`} onClick={() => setTab("regime")}><Compass size={16} /> REGIME</button>
         <button className={`nav-btn ${tab === "banks" ? "active" : ""}`} onClick={() => setTab("banks")}><Building2 size={16} /> BANKS</button>
+        <button className={`nav-btn ${tab === "fed" ? "active" : ""}`} onClick={() => setTab("fed")}><CalendarClock size={16} /> FED</button>
+        <button className={`nav-btn ${tab === "confluence" ? "active" : ""}`} onClick={() => setTab("confluence")}><Scale size={16} /> CONFLUENCE</button>
         <button className={`nav-btn ${tab === "sentiment" ? "active" : ""}`} onClick={() => setTab("sentiment")}><Gauge size={16} /> SENTIMENT</button>
         <button className={`nav-btn ${tab === "risk" ? "active" : ""}`} onClick={() => setTab("risk")}><Globe2 size={16} /> RISK</button>
         <button className={`nav-btn ${tab === "crypto" ? "active" : ""}`} onClick={() => setTab("crypto")}><Bitcoin size={16} /> CRYPTO</button>
         <button className={`nav-btn ${tab === "forex" ? "active" : ""}`} onClick={() => setTab("forex")}><CircleDollarSign size={16} /> FOREX</button>
         <button className={`nav-btn ${tab === "metals" ? "active" : ""}`} onClick={() => setTab("metals")}><Gem size={16} /> METALS</button>
+        <button className={`nav-btn ${tab === "ask" ? "active" : ""}`} onClick={() => setTab("ask")}><Bot size={16} /> ASK AI</button>
       </div>
     </div>
   );
