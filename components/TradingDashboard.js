@@ -25,39 +25,57 @@ const METALS = [
 ];
 
 const MACRO_SERIES = [
-  { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T" },
-  { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T" },
-  { category: "Growth & Output", id: "INDPRO", label: "Industrial Production", placeholder: "103.2" },
-  { category: "Growth & Output", id: "RSAFS", label: "Retail Sales", placeholder: "$720B" },
-  { category: "Growth & Output", id: "PCE", label: "Personal Consumption", placeholder: "$19.8T" },
+  { category: "Growth & Output", id: "GDP", label: "GDP (nominal)", placeholder: "$29.0T", sense: "up-bull" },
+  { category: "Growth & Output", id: "GDPC1", label: "Real GDP", placeholder: "$23.5T", sense: "up-bull" },
+  { category: "Growth & Output", id: "INDPRO", label: "Industrial Production", placeholder: "103.2", sense: "up-bull" },
+  { category: "Growth & Output", id: "RSAFS", label: "Retail Sales", placeholder: "$720B", sense: "up-bull" },
+  { category: "Growth & Output", id: "PCE", label: "Personal Consumption", placeholder: "$19.8T", sense: "up-bull" },
 
-  { category: "Prices & Inflation", id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%" },
-  { category: "Prices & Inflation", id: "CPILFESL", label: "Core CPI", placeholder: "3.0%" },
-  { category: "Prices & Inflation", id: "PPIACO", label: "Producer Price Index", placeholder: "254.1" },
-  { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T" },
+  { category: "Prices & Inflation", id: "CPIAUCSL", label: "CPI (YoY)", placeholder: "2.7%", sense: "up-bear" },
+  { category: "Prices & Inflation", id: "CPILFESL", label: "Core CPI", placeholder: "3.0%", sense: "up-bear" },
+  { category: "Prices & Inflation", id: "PPIACO", label: "Producer Price Index", placeholder: "254.1", sense: "up-bear" },
+  { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T", sense: "up-bull" },
 
-  { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%" },
-  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M" },
-  { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%" },
-  { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K" },
-  { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K" },
-  { category: "Labor & Socioeconomic", id: "UMCSENT", label: "Consumer Sentiment", placeholder: "68.5" },
+  { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%", sense: "up-bear" },
+  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M", sense: "up-bull" },
+  { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%", sense: "up-bull" },
+  { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K", sense: "up-bear" },
+  { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K", sense: "up-bull" },
+  { category: "Labor & Socioeconomic", id: "UMCSENT", label: "Consumer Sentiment", placeholder: "68.5", sense: "up-bull" },
 
-  { category: "Housing", id: "HOUST", label: "Housing Starts", placeholder: "1.35M" },
-  { category: "Housing", id: "MSPUS", label: "Median Home Sale Price", placeholder: "$420K" },
-  { category: "Housing", id: "MORTGAGE30US", label: "30-Yr Mortgage Rate", placeholder: "6.7%" },
+  { category: "Housing", id: "HOUST", label: "Housing Starts", placeholder: "1.35M", sense: "up-bull" },
+  { category: "Housing", id: "MSPUS", label: "Median Home Sale Price", placeholder: "$420K", sense: "up-bull" },
+  { category: "Housing", id: "MORTGAGE30US", label: "30-Yr Mortgage Rate", placeholder: "6.7%", sense: "up-bear" },
 
-  { category: "Rates & Money", id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%" },
-  { category: "Rates & Money", id: "DGS2", label: "2-Year Yield", placeholder: "4.10%" },
-  { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%" },
-  { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%" },
+  { category: "Rates & Money", id: "FEDFUNDS", label: "Fed Funds Rate", placeholder: "4.33%", sense: "up-bear" },
+  { category: "Rates & Money", id: "DGS2", label: "2-Year Yield", placeholder: "4.10%", sense: "up-bear" },
+  { category: "Rates & Money", id: "DGS10", label: "10-Year Yield", placeholder: "4.31%", sense: "up-bear" },
+  { category: "Rates & Money", id: "T10Y2Y", label: "10Y-2Y Spread", placeholder: "0.21%", sense: "curve" },
 
-  { category: "Banking & Liquidity", id: "STLFSI4", label: "Financial Stress Index", placeholder: "-0.30" },
-  { category: "Banking & Liquidity", id: "WALCL", label: "Fed Balance Sheet", placeholder: "$6.9T" },
-  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B" },
-  { category: "Banking & Liquidity", id: "WRESBAL", label: "Bank Reserve Balances", placeholder: "$3.2T" },
-  { category: "Banking & Liquidity", id: "SOFR", label: "SOFR (overnight funding)", placeholder: "4.30%" },
+  { category: "Banking & Liquidity", id: "STLFSI4", label: "Financial Stress Index", placeholder: "-0.30", sense: "up-bear" },
+  { category: "Banking & Liquidity", id: "WALCL", label: "Fed Balance Sheet", placeholder: "$6.9T", sense: "up-bull" },
+  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B", sense: "up-bear" },
+  { category: "Banking & Liquidity", id: "WRESBAL", label: "Bank Reserve Balances", placeholder: "$3.2T", sense: "up-bull" },
+  { category: "Banking & Liquidity", id: "SOFR", label: "SOFR (overnight funding)", placeholder: "4.30%", sense: "up-bear" },
 ];
+
+// Given a merged macro series object ({ id, value, trend, sense }), return a
+// Bullish / Bearish / Neutral read. "up-bull" = rising is constructive for
+// growth/liquidity/risk sentiment; "up-bear" = rising is a headwind (tighter
+// policy, higher costs, more stress); "curve" = special-cased for T10Y2Y,
+// where an inverted spread overrides the trend read.
+function biasForSeries(m) {
+  if (!m || m.trend == null) return "Neutral";
+  if (m.sense === "curve") {
+    const v = parseFloat(m.value);
+    if (!Number.isNaN(v) && v < 0) return "Bearish";
+    if (m.trend === "flat") return "Neutral";
+    return m.trend === "up" ? "Bullish" : "Bearish";
+  }
+  if (m.trend === "flat") return "Neutral";
+  const risingIsGood = m.sense === "up-bull";
+  return (m.trend === "up") === risingIsGood ? "Bullish" : "Bearish";
+}
 
 const MACRO_OVERVIEW_IDS = ["GDP", "GDPC1", "CPIAUCSL", "FEDFUNDS", "DGS10", "T10Y2Y"];
 const SOCIO_OVERVIEW_IDS = ["UNRATE", "CIVPART", "PAYEMS", "MEHOINUSA672N", "UMCSENT", "ICSA"];
@@ -308,6 +326,20 @@ export default function TapeApp() {
     if (!macroByCategory[m.category]) macroByCategory[m.category] = [];
     macroByCategory[m.category].push(m);
   });
+
+  // ---- Per-indicator Bullish/Bearish/Neutral tags + summary counts ----
+  const macroBiasCounts = { Bullish: 0, Bearish: 0, Neutral: 0 };
+  (macro.data || []).forEach((m) => {
+    macroBiasCounts[biasForSeries(m)] += 1;
+  });
+  const macroBiasTotal = macro.data?.length || 0;
+  const macroOverallBias = macroBiasTotal === 0
+    ? "…"
+    : macroBiasCounts.Bullish > macroBiasCounts.Bearish
+      ? "Net Bullish"
+      : macroBiasCounts.Bearish > macroBiasCounts.Bullish
+        ? "Net Bearish"
+        : "Balanced";
 
   // ---- Regime / bias logic ----
   const gdp = macro.data?.find((m) => m.id === "GDPC1");
@@ -584,6 +616,35 @@ export default function TapeApp() {
         {tab === "macro" && (
           <>
             <SectionLabel eyebrow="United States">Macro, Micro & Socioeconomic</SectionLabel>
+
+            <div className="macro-cat">Macro Summary</div>
+            <div className="confluence-card">
+              <div className="confluence-head">
+                <div className="cname">Overall Read</div>
+                <span className={`factor-tag ${macroOverallBias === "Net Bullish" ? "bull" : macroOverallBias === "Net Bearish" ? "bear" : "neu"}`}>
+                  {macroOverallBias}
+                </span>
+              </div>
+              <div className="grid-2" style={{ marginTop: 4 }}>
+                <div className="card" style={{ background: "var(--panel-hi)" }}>
+                  <div className="card-title">Bullish</div>
+                  <div className="card-value" style={{ color: "var(--up)" }}>{macroBiasCounts.Bullish}</div>
+                </div>
+                <div className="card" style={{ background: "var(--panel-hi)" }}>
+                  <div className="card-title">Bearish</div>
+                  <div className="card-value" style={{ color: "var(--down)" }}>{macroBiasCounts.Bearish}</div>
+                </div>
+                <div className="card" style={{ background: "var(--panel-hi)" }}>
+                  <div className="card-title">Neutral</div>
+                  <div className="card-value" style={{ color: "var(--text-muted)" }}>{macroBiasCounts.Neutral}</div>
+                </div>
+                <div className="card" style={{ background: "var(--panel-hi)" }}>
+                  <div className="card-title">Tracked</div>
+                  <div className="card-value">{macroBiasTotal}</div>
+                </div>
+              </div>
+            </div>
+
             <OverviewGrid title="Macro Overview" ids={MACRO_OVERVIEW_IDS} macroData={macro.data} />
             <OverviewGrid title="Socioeconomic Overview" ids={SOCIO_OVERVIEW_IDS} macroData={macro.data} />
             <OverviewGrid title="Micro Overview" ids={MICRO_OVERVIEW_IDS} macroData={macro.data} />
@@ -591,21 +652,32 @@ export default function TapeApp() {
             {Object.keys(macroByCategory).map((cat) => (
               <div key={cat}>
                 <div className="macro-cat">{cat}</div>
-                {macroByCategory[cat].map((m) => (
-                  <div className="card-row" key={m.id}>
-                    <div className="row-name">
-                      <span className={`macro-live-dot ${m.live ? "live" : ""}`} />
-                      <div>
-                        <div>{m.label}</div>
-                        <div className="sym">{m.id}</div>
+                {macroByCategory[cat].map((m) => {
+                  const bias = biasForSeries(m);
+                  return (
+                    <div className="card-row" key={m.id}>
+                      <div className="row-name">
+                        <span className={`macro-live-dot ${m.live ? "live" : ""}`} />
+                        <div>
+                          <div>{m.label}</div>
+                          <div className="sym">{m.id}</div>
+                        </div>
+                      </div>
+                      <div className="row-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div className="price">{m.value} <TrendArrow trend={m.trend} /></div>
+                        <span className={`factor-tag ${bias === "Bullish" ? "bull" : bias === "Bearish" ? "bear" : "neu"}`}>{bias}</span>
                       </div>
                     </div>
-                    <div className="row-right"><div className="price">{m.value} <TrendArrow trend={m.trend} /></div></div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
             <p className="empty-note">Dots are amber = placeholder, green = live via your FRED proxy.</p>
+            <div className="disclaimer">
+              Bullish/Bearish tags are a simple rule-of-thumb read of each series' trend direction
+              (e.g. rising CPI or Fed Funds = Bearish for risk assets; rising GDP or Payrolls =
+              Bullish). It's a quick heuristic, not a signal — always check the underlying number.
+            </div>
           </>
         )}
 
