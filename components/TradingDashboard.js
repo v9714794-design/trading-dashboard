@@ -71,7 +71,7 @@ const MACRO_SERIES = [
 
   { category: "Banking & Liquidity", id: "STLFSI4", label: "Financial Stress Index", placeholder: "-0.30", sense: "up-bear", format: "decimal2" },
   { category: "Banking & Liquidity", id: "WALCL", label: "Fed Balance Sheet", placeholder: "$6.9T", sense: "up-bull", format: "trillionsFromMillions" },
-  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B", sense: "up-bear", format: "billionsFromMillions" },
+  { category: "Banking & Liquidity", id: "RRPONTSYD", label: "Overnight Reverse Repo", placeholder: "$150B", sense: "up-bear", format: "billions" },
   { category: "Banking & Liquidity", id: "WRESBAL", label: "Bank Reserve Balances", placeholder: "$3.2T", sense: "up-bull", format: "trillionsFromMillions" },
   { category: "Banking & Liquidity", id: "SOFR", label: "SOFR (overnight funding)", placeholder: "4.30%", sense: "up-bear", format: "percent" },
 ];
@@ -90,6 +90,7 @@ function formatMacroValue(fmt, raw) {
     case "trillionsFromMillions": return `$${(n / 1e6).toFixed(2)}T`;
     case "trillionsFromBillions": return `$${(n / 1000).toFixed(2)}T`;
     case "billionsFromMillions": return `$${(n / 1000).toFixed(1)}B`;
+    case "billions": return `$${n.toFixed(1)}B`;
     case "millionsFromThousands": return `${(n / 1000).toFixed(2)}M`;
     case "thousandsK": return `${Math.round(n).toLocaleString()}`;
     case "dollar": return `$${Math.round(n).toLocaleString()}`;
