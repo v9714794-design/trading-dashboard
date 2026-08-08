@@ -5,7 +5,7 @@ import {
 import {
   TrendingUp, TrendingDown, Bitcoin, Landmark,
   CircleDollarSign, Gem, LayoutGrid, Compass, Building2,
-  Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send,
+  Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send, Gavel,
 } from "lucide-react";
 
 const MACRO_API_BASE = "";
@@ -125,6 +125,47 @@ const CPI_2026 = [
   { date: "2026-10-14", confirmed: false },
   { date: "2026-11-13", confirmed: false },
   { date: "2026-12-15", confirmed: false },
+];
+
+// 2026 Non-Farm Payrolls (Employment Situation) release days. Sep confirmed
+// via bls.gov; remaining months follow the usual "first Friday" pattern.
+const NFP_2026 = [
+  { date: "2026-09-04", confirmed: true },
+  { date: "2026-10-02", confirmed: false },
+  { date: "2026-11-06", confirmed: false },
+  { date: "2026-12-04", confirmed: false },
+];
+
+// 2026 Advance Retail Sales release days, via census.gov's release calendar.
+const RETAIL_2026 = [
+  { date: "2026-08-14", confirmed: true },
+  { date: "2026-09-16", confirmed: false },
+  { date: "2026-10-15", confirmed: false },
+  { date: "2026-11-17", confirmed: false },
+  { date: "2026-12-16", confirmed: false },
+];
+
+// Illustrative average 1-hour reaction stats for gold/BTC around each print.
+// These are ballpark, desk-lore-style estimates for an educational "what
+// tends to happen" reference — NOT computed from live tick data (this
+// dashboard has no historical intraday feed to calculate real ones).
+const MARKET_MAKER_EVENTS = [
+  {
+    id: "NFP", name: "Non-Farm Payrolls", desc: "US jobs report — the king of prints",
+    stars: 3, dates: NFP_2026, seriesId: "PAYEMS", goldMove: 0.42, btcMove: 0.8,
+  },
+  {
+    id: "CPI", name: "CPI Inflation", desc: "Consumer Price Index YoY",
+    stars: 3, dates: CPI_2026, seriesId: "CPIAUCSL", goldMove: 0.56, btcMove: 1.04,
+  },
+  {
+    id: "FOMC", name: "FOMC Decision", desc: "Fed rate decision + Powell presser",
+    stars: 3, dates: FOMC_2026.map((f) => ({ date: f.date, confirmed: true })), seriesId: "FEDFUNDS", goldMove: 0.71, btcMove: 1.35,
+  },
+  {
+    id: "RETAIL", name: "Retail Sales", desc: "Consumer spending pulse",
+    stars: 2, dates: RETAIL_2026, seriesId: "RSAFS", goldMove: 0.3, btcMove: 0.55,
+  },
 ];
 
 const FED_ASSET_IMPACT = {
@@ -391,6 +432,23 @@ export default function TapeApp() {
   const daysToFomc = nextFomc ? Math.ceil((nextFomc.d - today) / 86400000) : null;
   const nextCpi = CPI_2026.map((c) => ({ ...c, d: new Date(c.date) })).find((c) => c.d >= today) || null;
   const daysToCpi = nextCpi ? Math.ceil((nextCpi.d - today) / 86400000) : null;
+
+  // ---- Market Makers: reaction stats around high-impact prints ----
+  function nextEventDate(dates) {
+    const found = dates.map((d) => ({ ...d, d: new Date(d.date) })).find((d) => d.d >= today) || null;
+    return found ? { ...found, days: Math.ceil((found.d - today) / 86400000) } : null;
+  }
+  const marketMakerEvents = MARKET_MAKER_EVENTS.map((ev) => {
+    const next = nextEventDate(ev.dates);
+    const live = macro.data?.find((m) => m.id === ev.seriesId);
+    return { ...ev, next, live };
+  });
+  const nextMarketMaker = marketMakerEvents
+    .filter((e) => e.next)
+    .sort((a, b) => a.next.days - b.next.days)[0] || null;
+  const avgGoldMove1h = marketMakerEvents.reduce((s, e) => s + e.goldMove, 0) / marketMakerEvents.length;
+  const avgBtcMove1h = marketMakerEvents.reduce((s, e) => s + e.btcMove, 0) / marketMakerEvents.length;
+  const btcBeta = (avgBtcMove1h / avgGoldMove1h).toFixed(1);
 
   // ---- Bull/Bear confluence engine ----
   const walcl = macro.data?.find((m) => m.id === "WALCL");
@@ -1004,6 +1062,75 @@ export default function TapeApp() {
           </>
         )}
 
+        {tab === "makers" && (
+          <>
+            <SectionLabel eyebrow="High-impact print reaction reference">Market Makers</SectionLabel>
+
+            <div className="card" style={{ marginBottom: 10, borderColor: "var(--amber)" }}>
+              <div className="card-title">Next Market Maker</div>
+              <div className="card-value" style={{ fontSize: 20 }}>{nextMarketMaker?.name || "—"}</div>
+              <div style={{ fontSize: 12.5, color: "var(--amber)", marginTop: 4 }}>
+                {nextMarketMaker?.next ? `${nextMarketMaker.next.days}d — ${nextMarketMaker.next.date}` : "No date on file"}
+              </div>
+            </div>
+
+            <div className="grid-2" style={{ marginBottom: 14 }}>
+              <div className="card">
+                <div className="card-title">Avg Gold 1h Move</div>
+                <div className="card-value">±{avgGoldMove1h.toFixed(2)}%</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>across {marketMakerEvents.length} event types</div>
+              </div>
+              <div className="card">
+                <div className="card-title">BTC Beta on Prints</div>
+                <div className="card-value">≈{btcBeta}×</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>BTC vs Gold, same surprise</div>
+              </div>
+            </div>
+
+            <div className="macro-cat">Upcoming Prints</div>
+            {marketMakerEvents.map((ev) => (
+              <div className="confluence-card" key={ev.id}>
+                <div className="confluence-head">
+                  <div>
+                    <div className="cname">{ev.name}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{ev.desc}</div>
+                  </div>
+                  <span className="factor-tag neu">{"★".repeat(ev.stars)}</span>
+                </div>
+                <div className="factor-row">
+                  <div>Latest release ({ev.seriesId})</div>
+                  <span>{ev.live ? `${ev.live.value} ${ev.live.trend === "up" ? "↑" : ev.live.trend === "down" ? "↓" : "→"}` : "—"}</span>
+                </div>
+                <div className="factor-row">
+                  <div>Next release</div>
+                  <span>{ev.next ? `${ev.next.date}${ev.next.confirmed ? "" : " (projected)"} · ${ev.next.days}d` : "—"}</span>
+                </div>
+                <div className="factor-row">
+                  <div>Gold avg 1h punch</div>
+                  <span>±{ev.goldMove.toFixed(2)}%</span>
+                </div>
+                <div className="confluence-bar-track" style={{ marginBottom: 6 }}>
+                  <div className="confluence-bar-fill" style={{ width: `${Math.min(ev.goldMove / 1.2, 1) * 100}%`, background: "var(--amber)" }} />
+                </div>
+                <div className="factor-row">
+                  <div>BTC avg 1h punch</div>
+                  <span>±{ev.btcMove.toFixed(2)}%</span>
+                </div>
+                <div className="confluence-bar-track">
+                  <div className="confluence-bar-fill" style={{ width: `${Math.min(ev.btcMove / 2, 1) * 100}%`, background: "#8b7bd8" }} />
+                </div>
+              </div>
+            ))}
+
+            <div className="disclaimer">
+              "Latest release" and "Next release" dates are real (FRED + official BLS/Census/Fed
+              calendars). The 1-hour gold/BTC reaction estimates are an illustrative desk-lore
+              reference for typical post-print volatility — not computed from live tick data (this
+              dashboard has no historical intraday feed), so treat them as ballpark, not backtested fact.
+            </div>
+          </>
+        )}
+
         {tab === "ask" && (
           <>
             <SectionLabel eyebrow="Answers from what's on screen right now">Ask AI</SectionLabel>
@@ -1039,6 +1166,7 @@ export default function TapeApp() {
         <button className={`nav-btn ${tab === "banks" ? "active" : ""}`} onClick={() => setTab("banks")}><Building2 size={16} /> BANKS</button>
         <button className={`nav-btn ${tab === "fed" ? "active" : ""}`} onClick={() => setTab("fed")}><CalendarClock size={16} /> FED</button>
         <button className={`nav-btn ${tab === "confluence" ? "active" : ""}`} onClick={() => setTab("confluence")}><Scale size={16} /> CONFLUENCE</button>
+        <button className={`nav-btn ${tab === "makers" ? "active" : ""}`} onClick={() => setTab("makers")}><Gavel size={16} /> MAKERS</button>
         <button className={`nav-btn ${tab === "sentiment" ? "active" : ""}`} onClick={() => setTab("sentiment")}><Gauge size={16} /> SENTIMENT</button>
         <button className={`nav-btn ${tab === "risk" ? "active" : ""}`} onClick={() => setTab("risk")}><Globe2 size={16} /> RISK</button>
         <button className={`nav-btn ${tab === "crypto" ? "active" : ""}`} onClick={() => setTab("crypto")}><Bitcoin size={16} /> CRYPTO</button>
