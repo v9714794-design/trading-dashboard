@@ -594,32 +594,47 @@ export default function TapeApp() {
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
         .tape-root { --bg:#0a0c10; --panel:#12161d; --panel-hi:#171d27; --border:#242b38; --text:#eceef2; --text-muted:#7c8494; --amber:#f0a900; --accent2:#4da3ff; --up:#33d17e; --down:#ff5c6c; font-family:'Space Grotesk',sans-serif; background:radial-gradient(ellipse at top,#12161f 0%,var(--bg) 60%); color:var(--text); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:76px; position:relative; }
         .mono { font-family:'IBM Plex Mono',monospace; }
-        .ticker-wrap { background:#000; border-bottom:1px solid var(--border); overflow:hidden; white-space:nowrap; padding:7px 0; }
+        .ticker-wrap { position:relative; background:#000; border-bottom:1px solid var(--border); overflow:hidden; white-space:nowrap; padding:7px 0; }
+        .ticker-wrap::before, .ticker-wrap::after { content:''; position:absolute; top:0; bottom:0; width:28px; z-index:2; pointer-events:none; }
+        .ticker-wrap::before { left:0; background:linear-gradient(90deg,#000,transparent); }
+        .ticker-wrap::after { right:0; background:linear-gradient(270deg,#000,transparent); }
         .ticker-track { display:inline-block; animation:scroll-left 22s linear infinite; }
         .ticker-track span { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); margin-right:28px; letter-spacing:0.02em; }
         @keyframes scroll-left { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+        @media (prefers-reduced-motion: reduce) { .ticker-track { animation:none; } }
         .app-header { display:flex; align-items:flex-start; justify-content:space-between; padding:18px 16px 12px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(240,169,0,0.05),transparent); }
+        .brand-row { display:flex; align-items:center; gap:8px; }
+        .live-pulse { width:7px; height:7px; border-radius:50%; background:var(--up); box-shadow:0 0 0 0 rgba(51,209,126,0.6); animation:pulse 2s infinite; }
+        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(51,209,126,0.5);} 70%{box-shadow:0 0 0 7px rgba(51,209,126,0);} 100%{box-shadow:0 0 0 0 rgba(51,209,126,0);} }
+        @media (prefers-reduced-motion: reduce) { .live-pulse { animation:none; } }
         .app-header h1 { font-size:22px; font-weight:700; letter-spacing:0.08em; margin:0; background:linear-gradient(90deg,var(--text),var(--amber)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
         .brand-tag { font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-muted); letter-spacing:0.14em; margin-top:2px; }
         .app-header .sub { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; }
-        .user-chip { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.04em; padding:5px 11px; border-radius:20px; border:1px solid var(--border); background:var(--panel-hi); color:var(--text-muted); cursor:pointer; }
+        .user-chip { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.04em; padding:5px 11px; border-radius:20px; border:1px solid var(--border); background:var(--panel-hi); color:var(--text-muted); cursor:pointer; transition:transform 0.12s ease, border-color 0.12s ease; }
+        .user-chip:active { transform:scale(0.96); }
         .user-chip.signin { color:var(--amber); border-color:rgba(240,169,0,0.4); }
         .user-chip.admin { color:var(--accent2); border-color:rgba(77,163,255,0.4); background:rgba(77,163,255,0.08); }
-        .auth-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
-        .auth-modal { background:var(--panel-hi); border:1px solid var(--border); border-radius:14px; padding:20px; width:100%; max-width:340px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+        .auth-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; animation:fade-in 0.15s ease; }
+        @keyframes fade-in { from{opacity:0;} to{opacity:1;} }
+        .auth-modal { background:var(--panel-hi); border:1px solid var(--border); border-radius:14px; padding:20px; width:100%; max-width:340px; box-shadow:0 20px 60px rgba(0,0,0,0.5); animation:rise-in 0.18s ease; }
+        @keyframes rise-in { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
         .auth-tabs { display:flex; gap:6px; margin-bottom:14px; background:var(--panel); border-radius:8px; padding:3px; }
-        .auth-tabs button { flex:1; padding:8px; border:none; background:none; border-radius:6px; color:var(--text-muted); font-family:'Space Grotesk',sans-serif; font-size:12.5px; cursor:pointer; }
+        .auth-tabs button { flex:1; padding:8px; border:none; background:none; border-radius:6px; color:var(--text-muted); font-family:'Space Grotesk',sans-serif; font-size:12.5px; cursor:pointer; transition:background 0.15s ease, color 0.15s ease; }
         .auth-tabs button.active { background:var(--amber); color:#000; font-weight:600; }
-        .auth-input { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:11px 12px; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:13px; margin-bottom:10px; box-sizing:border-box; }
+        .auth-input { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:11px 12px; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:13px; margin-bottom:10px; box-sizing:border-box; transition:border-color 0.15s ease; }
+        .auth-input:focus { outline:none; border-color:var(--amber); }
         .auth-error { color:var(--down); font-size:12px; margin-bottom:10px; }
-        .auth-submit { width:100%; background:var(--amber); border:none; border-radius:8px; padding:11px; color:#000; font-weight:600; font-size:13px; cursor:pointer; }
+        .auth-submit { width:100%; background:var(--amber); border:none; border-radius:8px; padding:11px; color:#000; font-weight:600; font-size:13px; cursor:pointer; transition:transform 0.12s ease; }
+        .auth-submit:active { transform:scale(0.98); }
         .content { padding:4px 16px 16px; }
-        .section-label { margin:22px 0 10px; }
+        .section-label { margin:22px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
         .section-label .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.12em; text-transform:uppercase; }
         .section-label h2 { font-size:15px; font-weight:600; margin:2px 0 0; }
         .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 2px 10px rgba(0,0,0,0.18); }
-        .card-row { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .card { position:relative; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 2px 10px rgba(0,0,0,0.18); transition:border-color 0.15s ease; }
+        .card::before { content:''; position:absolute; top:0; left:12px; right:12px; height:1px; background:linear-gradient(90deg,transparent,rgba(240,169,0,0.35),transparent); }
+        .card-row { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; transition:transform 0.1s ease; }
+        .card-row:active { transform:scale(0.99); }
         .card-title { font-size:12px; color:var(--text-muted); margin-bottom:4px; }
         .card-value { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:500; display:flex; align-items:center; gap:6px; }
         .pill { font-family:'IBM Plex Mono',monospace; font-size:11px; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:5px; }
@@ -633,18 +648,20 @@ export default function TapeApp() {
         .macro-live-dot.live { background:var(--up); }
         .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
         .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; overflow-x:auto; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 16px rgba(0,0,0,0.25); }
-        .nav-btn { flex:none; background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'IBM Plex Mono',monospace; padding:4px 10px; cursor:pointer; border-radius:8px; }
+        .nav-btn { flex:none; background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'IBM Plex Mono',monospace; padding:4px 10px; cursor:pointer; border-radius:8px; transition:color 0.15s ease, background 0.15s ease; }
         .nav-btn.active { color:var(--amber); background:rgba(240,169,0,0.08); }
         .empty-note { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; padding:10px 0; }
-        .disclaimer { font-size:10.5px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; background:var(--panel); border:1px dashed var(--border); border-radius:8px; padding:10px 12px; margin:10px 0 4px; line-height:1.5; }
+        .disclaimer { font-size:10.5px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--amber); border-radius:4px; padding:10px 12px; margin:10px 0 4px; line-height:1.6; }
+        .disclaimer::before { content:'SYS · '; color:var(--amber); }
         .regime-matrix { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 4px; }
         .regime-cell { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--panel); }
         .regime-cell.active { border-color:var(--amber); background:rgba(240,162,2,0.08); }
         .regime-cell .rname { font-weight:600; font-size:13px; margin-bottom:3px; }
         .regime-cell .rsub { font-size:10.5px; color:var(--text-muted); }
-        .score-dial { text-align:center; padding:18px 12px; }
-        .score-dial .num { font-family:'IBM Plex Mono',monospace; font-size:40px; font-weight:600; }
-        .score-dial .lbl { font-size:12px; color:var(--text-muted); margin-top:2px; }
+        .score-dial { text-align:center; padding:20px 12px; }
+        .score-dial .ring { width:104px; height:104px; border-radius:50%; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; }
+        .score-dial .num { font-family:'IBM Plex Mono',monospace; font-size:32px; font-weight:600; background:var(--panel); width:82px; height:82px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        .score-dial .lbl { font-size:12px; color:var(--text-muted); margin-top:8px; }
         .news-item { border-bottom:1px solid var(--border); padding:10px 0; }
         .news-item a { color:var(--text); text-decoration:none; font-size:13px; line-height:1.4; }
         .news-item .meta { font-size:10px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; margin-top:3px; }
@@ -688,7 +705,10 @@ export default function TapeApp() {
 
       <div className="app-header">
         <div>
-          <h1>TAPE</h1>
+          <div className="brand-row">
+            <span className="live-pulse" />
+            <h1>TAPE</h1>
+          </div>
           <div className="brand-tag">MACRO &amp; MARKETS TERMINAL</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
@@ -943,8 +963,10 @@ export default function TapeApp() {
           <>
             <SectionLabel eyebrow="Composite">Market Sentiment</SectionLabel>
             <div className="card score-dial">
-              <div className="num" style={{ color: sentimentScore == null ? "var(--text-muted)" : sentimentScore < 40 ? "var(--down)" : sentimentScore > 60 ? "var(--up)" : "var(--amber)" }}>
-                {sentimentScore ?? "…"}
+              <div className="ring" style={{ background: `conic-gradient(${sentimentScore == null ? "var(--border)" : sentimentScore < 40 ? "var(--down)" : sentimentScore > 60 ? "var(--up)" : "var(--amber)"} ${(sentimentScore ?? 0) * 3.6}deg, var(--border) 0deg)` }}>
+                <div className="num" style={{ color: sentimentScore == null ? "var(--text-muted)" : sentimentScore < 40 ? "var(--down)" : sentimentScore > 60 ? "var(--up)" : "var(--amber)" }}>
+                  {sentimentScore ?? "…"}
+                </div>
               </div>
               <div className="lbl">{sentimentLabel}</div>
             </div>
@@ -979,8 +1001,10 @@ export default function TapeApp() {
             <SectionLabel eyebrow="Derived from GDELT news data">Geopolitical Risk</SectionLabel>
             {news.error && <p className="empty-note">{news.error}</p>}
             <div className="card score-dial">
-              <div className="num" style={{ color: !news.data ? "var(--text-muted)" : news.data.riskScore > 65 ? "var(--down)" : news.data.riskScore > 35 ? "var(--amber)" : "var(--up)" }}>
-                {news.data ? news.data.riskScore : "…"}
+              <div className="ring" style={{ background: `conic-gradient(${!news.data ? "var(--border)" : news.data.riskScore > 65 ? "var(--down)" : news.data.riskScore > 35 ? "var(--amber)" : "var(--up)"} ${(news.data?.riskScore ?? 0) * 3.6}deg, var(--border) 0deg)` }}>
+                <div className="num" style={{ color: !news.data ? "var(--text-muted)" : news.data.riskScore > 65 ? "var(--down)" : news.data.riskScore > 35 ? "var(--amber)" : "var(--up)" }}>
+                  {news.data ? news.data.riskScore : "…"}
+                </div>
               </div>
               <div className="lbl">
                 {news.data ? (news.data.riskScore > 65 ? "Elevated" : news.data.riskScore > 35 ? "Moderate" : "Low") : "Loading…"}
@@ -1072,8 +1096,10 @@ export default function TapeApp() {
           <>
             <SectionLabel eyebrow="Built from FRED trend directions">Fed Hawk-Dove Meter</SectionLabel>
             <div className="card score-dial">
-              <div className="num" style={{ color: hawkLabel === "Hawkish" ? "var(--down)" : hawkLabel === "Dovish" ? "var(--up)" : "var(--amber)" }}>
-                {hawkScore}
+              <div className="ring" style={{ background: `conic-gradient(${hawkLabel === "Hawkish" ? "var(--down)" : hawkLabel === "Dovish" ? "var(--up)" : "var(--amber)"} ${hawkScore * 3.6}deg, var(--border) 0deg)` }}>
+                <div className="num" style={{ color: hawkLabel === "Hawkish" ? "var(--down)" : hawkLabel === "Dovish" ? "var(--up)" : "var(--amber)" }}>
+                  {hawkScore}
+                </div>
               </div>
               <div className="lbl">{hawkLabel}</div>
             </div>
