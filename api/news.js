@@ -1,6 +1,5 @@
 // Vercel Hobby functions default to a 10s execution limit, but can be raised
-// up to 60s — GDELT genuinely takes 8-15s to respond sometimes, so we need
-// real headroom here rather than retrying inside a too-short window.
+// up to 60s — GDELT can take 8-15s+ to respond, so this needs real headroom.
 export const config = { maxDuration: 30 };
 
 const REGIONS = {
@@ -11,14 +10,20 @@ const REGIONS = {
   "Asia-Pacific": ["china", "taiwan", "japan", "asia", "beijing", "korea", "india"],
 };
 
-// GDELT's edge often drops requests from cloud/datacenter IPs (like Vercel's)
-// that arrive without a browser-like User-Agent — that showed up earlier as
-// a raw "TypeError: fetch failed". Separately, GDELT can just be slow
-// (8-15s+), so we give it one attempt with a generous timeout rather than
-// a short timeout with a retry that only compounds the wait.
-async function fetchGdelt(url) {
+// Vercel's free-tier functions run from a shared, rotating IP pool used by
+// many other projects — GDELT rate-limits per IP, so its 429s here are often
+// caused by OTHER people's traffic, not just this dashboard's. Two defenses:
+// 1) an in-memory last-good-response cache (survives while this function
+//    instance stays warm) so a rate-limited request can still serve recent
+//    real data instead of an error, and
+// 2) one retry with backoff, honoring GDELT's Retry-After header if present.
+let lastGood = { data: null, ts: 0 };
+const CACHE_FRESH_MS = 5 * 60 * 1000; // serve straight from cache if newer than this
+const CACHE_STALE_OK_MS = 60 * 60 * 1000; // fall back to cache-on-error up to this old
+
+async function fetchGdeltOnce(url, timeoutMs) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, {
       signal: controller.signal,
@@ -32,7 +37,29 @@ async function fetchGdelt(url) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchGdelt(url) {
+  let r = await fetchGdeltOnce(url, 15000);
+  if (r.status === 429) {
+    const retryAfter = parseInt(r.headers.get("retry-after"), 10);
+    await sleep(Number.isFinite(retryAfter) ? retryAfter * 1000 : 3000);
+    r = await fetchGdeltOnce(url, 8000);
+  }
+  return r;
+}
+
 export default async function handler(req, res) {
+  const now = Date.now();
+
+  if (lastGood.data && now - lastGood.ts < CACHE_FRESH_MS) {
+    res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+    res.status(200).json({ ...lastGood.data, cached: true });
+    return;
+  }
+
   try {
     const query = encodeURIComponent(
       '(war OR conflict OR sanctions OR "central bank" OR inflation OR geopolitical OR recession OR tariffs OR ceasefire)'
@@ -66,15 +93,26 @@ export default async function handler(req, res) {
       return { region, count, level };
     });
 
-    res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1200");
-    res.status(200).json({
+    const payload = {
       articles,
       riskScore,
       avgTone: avgTone.toFixed(2),
       count: articles.length,
       regionRisk,
-    });
+    };
+
+    lastGood = { data: payload, ts: now };
+
+    res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1200");
+    res.status(200).json(payload);
   } catch (err) {
+    // Fall back to a recent-but-not-quite-fresh cached response rather than
+    // erroring outright, if we have one.
+    if (lastGood.data && now - lastGood.ts < CACHE_STALE_OK_MS) {
+      res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
+      res.status(200).json({ ...lastGood.data, cached: true, stale: true });
+      return;
+    }
     res.status(502).json({ error: "Unexpected error fetching news", detail: String(err) });
   }
 }
