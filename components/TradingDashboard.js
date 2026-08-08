@@ -6,9 +6,26 @@ import {
   TrendingUp, TrendingDown, Bitcoin, Landmark,
   CircleDollarSign, Gem, LayoutGrid, Compass, Building2,
   Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send, Gavel,
+  Menu, X, Sun, Moon,
 } from "lucide-react";
 
 const MACRO_API_BASE = "";
+
+const NAV_ITEMS = [
+  { id: "overview", label: "Overview", Icon: LayoutGrid },
+  { id: "macro", label: "Macro", Icon: Landmark },
+  { id: "regime", label: "Regime", Icon: Compass },
+  { id: "banks", label: "Banks", Icon: Building2 },
+  { id: "fed", label: "Fed", Icon: CalendarClock },
+  { id: "confluence", label: "Confluence", Icon: Scale },
+  { id: "makers", label: "Market Makers", Icon: Gavel },
+  { id: "sentiment", label: "Sentiment", Icon: Gauge },
+  { id: "risk", label: "Risk", Icon: Globe2 },
+  { id: "crypto", label: "Crypto", Icon: Bitcoin },
+  { id: "forex", label: "Forex", Icon: CircleDollarSign },
+  { id: "metals", label: "Metals", Icon: Gem },
+  { id: "ask", label: "Ask AI", Icon: Bot },
+];
 
 const CRYPTO_IDS = ["bitcoin", "ethereum", "solana", "ripple", "binancecoin", "dogecoin"];
 const FX_PAIRS = [
@@ -287,6 +304,26 @@ export default function TapeApp() {
   const [askQuestion, setAskQuestion] = useState("");
   const [askLog, setAskLog] = useState([]);
   const [askLoading, setAskLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem("tape-theme") : null;
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+  }, []);
+
+  function toggleTheme() {
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark";
+      if (typeof window !== "undefined") window.localStorage.setItem("tape-theme", next);
+      return next;
+    });
+  }
+
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
@@ -589,10 +626,21 @@ export default function TapeApp() {
   }
 
   return (
-    <div className="tape-root">
+    <div className={`tape-root ${theme === "light" ? "light" : ""}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
-        .tape-root { --bg:#0a0c10; --panel:#12161d; --panel-hi:#171d27; --border:#242b38; --text:#eceef2; --text-muted:#7c8494; --amber:#f0a900; --accent2:#4da3ff; --up:#33d17e; --down:#ff5c6c; font-family:'Space Grotesk',sans-serif; background:radial-gradient(ellipse at top,#12161f 0%,var(--bg) 60%); color:var(--text); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:76px; position:relative; }
+        .tape-root { --bg:#0a0c10; --panel:#12161d; --panel-hi:#171d27; --border:#242b38; --text:#eceef2; --text-muted:#7c8494; --amber:#f0a900; --accent2:#4da3ff; --up:#33d17e; --down:#ff5c6c; font-family:'Space Grotesk',sans-serif; background:radial-gradient(ellipse at top,#12161f 0%,var(--bg) 60%); color:var(--text); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:24px; position:relative; transition:background 0.2s ease, color 0.2s ease; }
+        .tape-root.light { --bg:#f4f5f7; --panel:#ffffff; --panel-hi:#eceef2; --border:#dde1e8; --text:#12161d; --text-muted:#5b6472; --amber:#b5790a; --accent2:#2f6fe0; --up:#1a8f52; --down:#d33a3a; background:radial-gradient(ellipse at top,#ffffff 0%,var(--bg) 60%); }
+        .icon-btn { background:none; border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:border-color 0.15s ease, transform 0.12s ease; }
+        .icon-btn:active { transform:scale(0.94); }
+        .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(2px); z-index:60; animation:fade-in 0.15s ease; }
+        .drawer-panel { position:fixed; top:0; left:0; bottom:0; width:78%; max-width:300px; background:var(--panel-hi); border-right:1px solid var(--border); box-shadow:8px 0 30px rgba(0,0,0,0.4); display:flex; flex-direction:column; animation:slide-in 0.18s ease; }
+        @keyframes slide-in { from{transform:translateX(-12px); opacity:0.6;} to{transform:translateX(0); opacity:1;} }
+        .drawer-head { display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid var(--border); }
+        .drawer-list { display:flex; flex-direction:column; padding:8px; overflow-y:auto; }
+        .drawer-item { display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:8px; background:none; border:none; color:var(--text-muted); font-family:'Space Grotesk',sans-serif; font-size:13.5px; cursor:pointer; text-align:left; transition:background 0.15s ease, color 0.15s ease; }
+        .drawer-item.active { color:var(--amber); background:rgba(240,169,0,0.1); font-weight:600; }
+        .drawer-item:active { transform:scale(0.98); }
         .mono { font-family:'IBM Plex Mono',monospace; }
         .ticker-wrap { position:relative; background:#000; border-bottom:1px solid var(--border); overflow:hidden; white-space:nowrap; padding:7px 0; }
         .ticker-wrap::before, .ticker-wrap::after { content:''; position:absolute; top:0; bottom:0; width:28px; z-index:2; pointer-events:none; }
@@ -647,9 +695,6 @@ export default function TapeApp() {
         .macro-live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-muted); margin-right:5px; }
         .macro-live-dot.live { background:var(--up); }
         .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
-        .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; overflow-x:auto; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 16px rgba(0,0,0,0.25); }
-        .nav-btn { flex:none; background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'IBM Plex Mono',monospace; padding:4px 10px; cursor:pointer; border-radius:8px; transition:color 0.15s ease, background 0.15s ease; }
-        .nav-btn.active { color:var(--amber); background:rgba(240,169,0,0.08); }
         .empty-note { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; padding:10px 0; }
         .disclaimer { font-size:10.5px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--amber); border-radius:4px; padding:10px 12px; margin:10px 0 4px; line-height:1.6; }
         .disclaimer::before { content:'SYS · '; color:var(--amber); }
@@ -690,7 +735,7 @@ export default function TapeApp() {
         .chat-bubble { border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; max-width:88%; }
         .chat-bubble.user { align-self:flex-end; background:rgba(240,162,2,0.12); border:1px solid rgba(240,162,2,0.3); }
         .chat-bubble.ai { align-self:flex-start; background:var(--panel); border:1px solid var(--border); white-space:pre-wrap; }
-        .chat-input-row { position:fixed; bottom:56px; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; gap:8px; padding:8px 16px; background:var(--bg); border-top:1px solid var(--border); }
+        .chat-input-row { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; gap:8px; padding:10px 16px calc(10px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--border); }
         .chat-input-row input { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:13px; }
         .chat-input-row button { background:var(--amber); border:none; border-radius:8px; padding:0 14px; display:flex; align-items:center; justify-content:center; color:#000; cursor:pointer; }
       `}</style>
@@ -704,15 +749,23 @@ export default function TapeApp() {
       </div>
 
       <div className="app-header">
-        <div>
-          <div className="brand-row">
-            <span className="live-pulse" />
-            <h1>TAPE</h1>
+        <div className="brand-row">
+          <button className="icon-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
+          <div>
+            <div className="brand-row" style={{ gap: 6 }}>
+              <span className="live-pulse" />
+              <h1>TAPE</h1>
+            </div>
+            <div className="brand-tag">MACRO &amp; MARKETS TERMINAL</div>
           </div>
-          <div className="brand-tag">MACRO &amp; MARKETS TERMINAL</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          <span className="sub">{new Date().toUTCString().slice(0, 22)}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="sub">{new Date().toUTCString().slice(0, 22)}</span>
+            <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
           {user ? (
             <button className={`user-chip ${user.role === "admin" ? "admin" : ""}`} onClick={doLogout} title="Tap to sign out">
               {user.email.split("@")[0]}{user.role === "admin" ? " · ADMIN" : ""}
@@ -722,6 +775,32 @@ export default function TapeApp() {
           )}
         </div>
       </div>
+
+      {menuOpen && (
+        <div className="drawer-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-head">
+              <div className="brand-row" style={{ gap: 6 }}>
+                <span className="live-pulse" />
+                <h1 style={{ fontSize: 18 }}>TAPE</h1>
+              </div>
+              <button className="icon-btn" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={18} /></button>
+            </div>
+            <div className="drawer-list">
+              {NAV_ITEMS.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  className={`drawer-item ${tab === id ? "active" : ""}`}
+                  onClick={() => { setTab(id); setMenuOpen(false); }}
+                >
+                  <Icon size={17} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {authOpen && (
         <div className="auth-overlay" onClick={() => setAuthOpen(false)}>
@@ -1278,23 +1357,6 @@ export default function TapeApp() {
           <button onClick={askAI} disabled={askLoading}><Send size={16} /></button>
         </div>
       )}
-
-
-      <div className="bottom-nav">
-        <button className={`nav-btn ${tab === "overview" ? "active" : ""}`} onClick={() => setTab("overview")}><LayoutGrid size={16} /> OVERVIEW</button>
-        <button className={`nav-btn ${tab === "macro" ? "active" : ""}`} onClick={() => setTab("macro")}><Landmark size={16} /> MACRO</button>
-        <button className={`nav-btn ${tab === "regime" ? "active" : ""}`} onClick={() => setTab("regime")}><Compass size={16} /> REGIME</button>
-        <button className={`nav-btn ${tab === "banks" ? "active" : ""}`} onClick={() => setTab("banks")}><Building2 size={16} /> BANKS</button>
-        <button className={`nav-btn ${tab === "fed" ? "active" : ""}`} onClick={() => setTab("fed")}><CalendarClock size={16} /> FED</button>
-        <button className={`nav-btn ${tab === "confluence" ? "active" : ""}`} onClick={() => setTab("confluence")}><Scale size={16} /> CONFLUENCE</button>
-        <button className={`nav-btn ${tab === "makers" ? "active" : ""}`} onClick={() => setTab("makers")}><Gavel size={16} /> MAKERS</button>
-        <button className={`nav-btn ${tab === "sentiment" ? "active" : ""}`} onClick={() => setTab("sentiment")}><Gauge size={16} /> SENTIMENT</button>
-        <button className={`nav-btn ${tab === "risk" ? "active" : ""}`} onClick={() => setTab("risk")}><Globe2 size={16} /> RISK</button>
-        <button className={`nav-btn ${tab === "crypto" ? "active" : ""}`} onClick={() => setTab("crypto")}><Bitcoin size={16} /> CRYPTO</button>
-        <button className={`nav-btn ${tab === "forex" ? "active" : ""}`} onClick={() => setTab("forex")}><CircleDollarSign size={16} /> FOREX</button>
-        <button className={`nav-btn ${tab === "metals" ? "active" : ""}`} onClick={() => setTab("metals")}><Gem size={16} /> METALS</button>
-        <button className={`nav-btn ${tab === "ask" ? "active" : ""}`} onClick={() => setTab("ask")}><Bot size={16} /> ASK AI</button>
-      </div>
     </div>
   );
 }             
