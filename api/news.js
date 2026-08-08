@@ -1,3 +1,8 @@
+// Vercel Hobby functions default to a 10s execution limit, but can be raised
+// up to 60s — GDELT genuinely takes 8-15s to respond sometimes, so we need
+// real headroom here rather than retrying inside a too-short window.
+export const config = { maxDuration: 30 };
+
 const REGIONS = {
   "Middle East": ["israel", "gaza", "iran", "middle east", "houthi", "hezbollah", "lebanon", "syria"],
   "Russia / Ukraine": ["russia", "ukraine", "kremlin", "moscow", "putin", "zelensky"],
@@ -7,13 +12,13 @@ const REGIONS = {
 };
 
 // GDELT's edge often drops requests from cloud/datacenter IPs (like Vercel's)
-// that arrive without a browser-like User-Agent — this shows up as a raw
-// "TypeError: fetch failed" with no HTTP status at all. Sending a UA fixes
-// most of it; a short timeout + one retry covers the rest (GDELT is
-// occasionally just slow).
-async function fetchWithTimeout(url, ms) {
+// that arrive without a browser-like User-Agent — that showed up earlier as
+// a raw "TypeError: fetch failed". Separately, GDELT can just be slow
+// (8-15s+), so we give it one attempt with a generous timeout rather than
+// a short timeout with a retry that only compounds the wait.
+async function fetchGdelt(url) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
+  const timer = setTimeout(() => controller.abort(), 25000);
   try {
     return await fetch(url, {
       signal: controller.signal,
@@ -24,15 +29,6 @@ async function fetchWithTimeout(url, ms) {
     });
   } finally {
     clearTimeout(timer);
-  }
-}
-
-async function fetchGdelt(url) {
-  try {
-    return await fetchWithTimeout(url, 8000);
-  } catch (e) {
-    // one retry on transient network/timeout failure
-    return await fetchWithTimeout(url, 8000);
   }
 }
 
