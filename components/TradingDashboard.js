@@ -287,6 +287,47 @@ export default function TapeApp() {
   const [askQuestion, setAskQuestion] = useState("");
   const [askLog, setAskLog] = useState([]);
   const [askLoading, setAskLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me").then((r) => r.json()).then((j) => setUser(j.user)).catch(() => {});
+  }, []);
+
+  async function submitAuth() {
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      const res = await fetch(`/api/auth/${authMode === "login" ? "login" : "signup"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: authEmail, password: authPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setAuthError(json.error || "Something went wrong");
+        return;
+      }
+      setUser({ email: json.email, role: json.role });
+      setAuthOpen(false);
+      setAuthEmail("");
+      setAuthPassword("");
+    } catch (e) {
+      setAuthError("Network error — try again");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function doLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+  }
 
   const pushHistory = useCallback((key, value) => {
     setHistory((h) => {
@@ -551,21 +592,33 @@ export default function TapeApp() {
     <div className="tape-root">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
-        .tape-root { --bg:#0b0e11; --panel:#12161c; --panel-hi:#171c24; --border:#232a34; --text:#e8e6e1; --text-muted:#7a8290; --amber:#f0a202; --up:#3ecf8e; --down:#ff5c5c; font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:76px; position:relative; }
+        .tape-root { --bg:#0a0c10; --panel:#12161d; --panel-hi:#171d27; --border:#242b38; --text:#eceef2; --text-muted:#7c8494; --amber:#f0a900; --accent2:#4da3ff; --up:#33d17e; --down:#ff5c6c; font-family:'Space Grotesk',sans-serif; background:radial-gradient(ellipse at top,#12161f 0%,var(--bg) 60%); color:var(--text); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:76px; position:relative; }
         .mono { font-family:'IBM Plex Mono',monospace; }
         .ticker-wrap { background:#000; border-bottom:1px solid var(--border); overflow:hidden; white-space:nowrap; padding:7px 0; }
         .ticker-track { display:inline-block; animation:scroll-left 22s linear infinite; }
         .ticker-track span { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); margin-right:28px; letter-spacing:0.02em; }
         @keyframes scroll-left { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
-        .app-header { display:flex; align-items:baseline; justify-content:space-between; padding:16px 16px 10px; }
-        .app-header h1 { font-size:20px; font-weight:700; letter-spacing:0.06em; margin:0; }
+        .app-header { display:flex; align-items:flex-start; justify-content:space-between; padding:18px 16px 12px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(240,169,0,0.05),transparent); }
+        .app-header h1 { font-size:22px; font-weight:700; letter-spacing:0.08em; margin:0; background:linear-gradient(90deg,var(--text),var(--amber)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .brand-tag { font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-muted); letter-spacing:0.14em; margin-top:2px; }
         .app-header .sub { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; }
+        .user-chip { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.04em; padding:5px 11px; border-radius:20px; border:1px solid var(--border); background:var(--panel-hi); color:var(--text-muted); cursor:pointer; }
+        .user-chip.signin { color:var(--amber); border-color:rgba(240,169,0,0.4); }
+        .user-chip.admin { color:var(--accent2); border-color:rgba(77,163,255,0.4); background:rgba(77,163,255,0.08); }
+        .auth-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+        .auth-modal { background:var(--panel-hi); border:1px solid var(--border); border-radius:14px; padding:20px; width:100%; max-width:340px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+        .auth-tabs { display:flex; gap:6px; margin-bottom:14px; background:var(--panel); border-radius:8px; padding:3px; }
+        .auth-tabs button { flex:1; padding:8px; border:none; background:none; border-radius:6px; color:var(--text-muted); font-family:'Space Grotesk',sans-serif; font-size:12.5px; cursor:pointer; }
+        .auth-tabs button.active { background:var(--amber); color:#000; font-weight:600; }
+        .auth-input { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:11px 12px; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:13px; margin-bottom:10px; box-sizing:border-box; }
+        .auth-error { color:var(--down); font-size:12px; margin-bottom:10px; }
+        .auth-submit { width:100%; background:var(--amber); border:none; border-radius:8px; padding:11px; color:#000; font-weight:600; font-size:13px; cursor:pointer; }
         .content { padding:4px 16px 16px; }
         .section-label { margin:22px 0 10px; }
         .section-label .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.12em; text-transform:uppercase; }
         .section-label h2 { font-size:15px; font-weight:600; margin:2px 0 0; }
         .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px; }
+        .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 2px 10px rgba(0,0,0,0.18); }
         .card-row { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .card-title { font-size:12px; color:var(--text-muted); margin-bottom:4px; }
         .card-value { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:500; display:flex; align-items:center; gap:6px; }
@@ -579,9 +632,9 @@ export default function TapeApp() {
         .macro-live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-muted); margin-right:5px; }
         .macro-live-dot.live { background:var(--up); }
         .macro-cat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--amber); letter-spacing:0.1em; text-transform:uppercase; margin:16px 0 6px; }
-        .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; overflow-x:auto; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
-        .nav-btn { flex:none; background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'IBM Plex Mono',monospace; padding:4px 10px; cursor:pointer; }
-        .nav-btn.active { color:var(--amber); }
+        .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--panel-hi); border-top:1px solid var(--border); display:flex; overflow-x:auto; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 16px rgba(0,0,0,0.25); }
+        .nav-btn { flex:none; background:none; border:none; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'IBM Plex Mono',monospace; padding:4px 10px; cursor:pointer; border-radius:8px; }
+        .nav-btn.active { color:var(--amber); background:rgba(240,169,0,0.08); }
         .empty-note { font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; padding:10px 0; }
         .disclaimer { font-size:10.5px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; background:var(--panel); border:1px dashed var(--border); border-radius:8px; padding:10px 12px; margin:10px 0 4px; line-height:1.5; }
         .regime-matrix { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 4px; }
@@ -634,9 +687,51 @@ export default function TapeApp() {
       </div>
 
       <div className="app-header">
-        <h1>TAPE</h1>
-        <span className="sub">{new Date().toUTCString().slice(0, 22)}</span>
+        <div>
+          <h1>TAPE</h1>
+          <div className="brand-tag">MACRO &amp; MARKETS TERMINAL</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <span className="sub">{new Date().toUTCString().slice(0, 22)}</span>
+          {user ? (
+            <button className={`user-chip ${user.role === "admin" ? "admin" : ""}`} onClick={doLogout} title="Tap to sign out">
+              {user.email.split("@")[0]}{user.role === "admin" ? " · ADMIN" : ""}
+            </button>
+          ) : (
+            <button className="user-chip signin" onClick={() => setAuthOpen(true)}>Sign In</button>
+          )}
+        </div>
       </div>
+
+      {authOpen && (
+        <div className="auth-overlay" onClick={() => setAuthOpen(false)}>
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="auth-tabs">
+              <button className={authMode === "login" ? "active" : ""} onClick={() => { setAuthMode("login"); setAuthError(""); }}>Log In</button>
+              <button className={authMode === "signup" ? "active" : ""} onClick={() => { setAuthMode("signup"); setAuthError(""); }}>Sign Up</button>
+            </div>
+            <input
+              type="email"
+              placeholder="Email"
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+              className="auth-input"
+            />
+            <input
+              type="password"
+              placeholder={authMode === "signup" ? "Password (min 8 characters)" : "Password"}
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              className="auth-input"
+              onKeyDown={(e) => { if (e.key === "Enter") submitAuth(); }}
+            />
+            {authError && <div className="auth-error">{authError}</div>}
+            <button className="auth-submit" onClick={submitAuth} disabled={authLoading}>
+              {authLoading ? "Please wait…" : authMode === "login" ? "Log In" : "Create Account"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="content">
         {tab === "overview" && (
