@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       url.searchParams.set("api_key", apiKey);
       url.searchParams.set("file_type", "json");
       url.searchParams.set("sort_order", "desc");
-      url.searchParams.set("limit", "14");
+      url.searchParams.set("limit", "16");
 
       const fredRes = await fetch(url.toString());
       if (!fredRes.ok) {
@@ -38,18 +38,25 @@ export default async function handler(req, res) {
       }
 
       const yoyAt = (i) => {
+        if (i + 12 >= obs.length) return null;
         const now = parseFloat(obs[i].value);
         const prior = parseFloat(obs[i + 12].value);
         return ((now - prior) / prior) * 100;
       };
 
       const yoyLatest = yoyAt(0);
-      const yoyPrev = obs.length >= 14 ? yoyAt(1) : null;
+      const yoyPrev = yoyAt(1);
 
       let trend = "flat";
       if (yoyPrev != null) {
         if (yoyLatest > yoyPrev) trend = "up";
         else if (yoyLatest < yoyPrev) trend = "down";
+      } else if (obs.length >= 2) {
+        // Not enough history to compare YoY-over-YoY — fall back to the raw
+        // month-over-month index direction so the UI never gets stuck.
+        const diff = parseFloat(obs[0].value) - parseFloat(obs[1].value);
+        if (diff > 0) trend = "up";
+        else if (diff < 0) trend = "down";
       }
 
       res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
