@@ -39,6 +39,70 @@ const PREVIOUS_SOURCE = {
   "Personal Income & Outlays (PCE)": { id: "PCE", kind: "level_trillions", suffix: "" },
 };
 
+// Keyword used to match each of our static events against the third-party
+// RapidAPI calendar's own (differently-worded) event names — e.g. their
+// "Non-Farm Payrolls" vs our "Employment Situation (NFP)".
+const FORECAST_MATCH_KEYWORDS = {
+  "CPI (Consumer Price Index)": ["cpi", "consumer price"],
+  "PPI (Producer Price Index)": ["ppi", "producer price"],
+  "Employment Situation (NFP)": ["non-farm", "nonfarm", "non farm payroll"],
+  "Retail Sales": ["retail sales"],
+  "Industrial Production": ["industrial production"],
+  "Housing Starts": ["housing starts"],
+  "Personal Income & Outlays (PCE)": ["pce", "personal income", "personal spending"],
+  "Employment Cost Index": ["employment cost"],
+};
+
+// Third-party, freely-scraped calendar (not an official source like FRED) —
+// used only for Forecast (consensus) and same-day Actual figures once
+// released, clearly labeled as unverified in the UI. Requires RAPIDAPI_KEY.
+async function fetchForecastMatches(rapidApiKey, today, future) {
+  const url = new URL("https://economic-calendar-api.p.rapidapi.com/calendar");
+  url.searchParams.set("countryCode", "US");
+  url.searchParams.set("dateFrom", today);
+  url.searchParams.set("dateTo", future);
+  url.searchParams.set("limit", "500");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const r = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        "X-RapidAPI-Key": rapidApiKey,
+        "X-RapidAPI-Host": "economic-calendar-api.p.rapidapi.com",
+      },
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : data.events || data.data || [];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function findMatch(eventName, remoteEvents, eventDate) {
+  const keywords = FORECAST_MATCH_KEYWORDS[eventName];
+  if (!keywords) return null;
+  const targetTime = new Date(eventDate).getTime();
+  let best = null;
+  let bestDiff = Infinity;
+  for (const re of remoteEvents) {
+    const remoteName = (re.name || "").toLowerCase();
+    if (!keywords.some((kw) => remoteName.includes(kw))) continue;
+    const remoteTime = new Date(re.dateUtc || re.date).getTime();
+    if (Number.isNaN(remoteTime)) continue;
+    const diff = Math.abs(remoteTime - targetTime);
+    if (diff < bestDiff && diff <= 2 * 24 * 60 * 60 * 1000) {
+      bestDiff = diff;
+      best = re;
+    }
+  }
+  return best;
+}
+
 async function fetchPrevious(apiKey, source) {
   const url = new URL("https://api.stlouisfed.org/fred/series/observations");
   url.searchParams.set("series_id", source.id);
@@ -108,10 +172,33 @@ export default async function handler(req, res) {
     );
   }
 
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  const rapidApiKey = process.env.RAPIDAPI_KEY;
+  let forecastSourceAvailable = false;
+  if (rapidApiKey) {
+    try {
+      const remoteEvents = await fetchForecastMatches(rapidApiKey, today, future);
+      if (remoteEvents.length > 0) {
+        forecastSourceAvailable = true;
+        for (const e of events) {
+          const match = findMatch(e.name, remoteEvents, e.date);
+          if (match) {
+            if (match.consensus) e.forecast = match.consensus;
+            if (match.actual) e.actual = match.actual;
+          }
+        }
+      }
+    } catch {
+      // no forecast data this time — calendar still works with dates + Previous
+    }
+  }
+
+  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
   res.status(200).json({
     events,
     source: "static-2026-omb-schedule",
-    note: "Forecast/consensus figures require a paid data license (Bloomberg/Trading Economics/Econoday) and aren't included — 'Previous' is the real last actual reading, live from FRED.",
+    forecastSourceAvailable,
+    note: forecastSourceAvailable
+      ? "Forecast/Actual come from a third-party scraped calendar (not an official source like FRED) — treat as unverified. 'Previous' is a real FRED reading."
+      : "Forecast/consensus figures require a paid data license or a connected third-party key and aren't included yet — 'Previous' is the real last actual reading, live from FRED.",
   });
 }

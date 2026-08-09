@@ -1290,18 +1290,24 @@ export default function TapeApp() {
                     <div className="event-name">{ev.name}</div>
                     <div className={`event-days ${days <= 3 ? "soon" : ""}`}>{days}d — {ev.date}</div>
                   </div>
-                  {ev.previous && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Previous: {ev.previous}</div>}
+                  {(ev.previous || ev.forecast || ev.actual) && (
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-muted)", flexWrap: "wrap" }}>
+                      {ev.previous && <span>Previous: {ev.previous}</span>}
+                      {ev.forecast && <span style={{ color: "var(--amber)" }}>Forecast: {ev.forecast}</span>}
+                      {ev.actual && <span style={{ color: "var(--accent2)" }}>Actual: {ev.actual}</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}
             <div className="disclaimer">
               Dates sourced from the official White House/OMB "Schedule of Release Dates for Principal
               Federal Economic Indicators for 2026" (BEA, BLS, Census, and Fed release calendars) — a
-              verified static list for the full year, not a live FRED API pull. "Previous" is the real
-              last actual reading, pulled live from FRED. Forecast/consensus figures require a paid data
-              license (Bloomberg, Trading Economics API, Econoday) and aren't included here — I won't
-              show a made-up number where a real one should be. Government shutdowns or agency notices
-              can still shift a date after publication.
+              verified static list for the full year, not a live FRED API pull. "Previous" is a real
+              FRED reading. {econCalendar.data?.forecastSourceAvailable
+                ? "\"Forecast\" and \"Actual\" come from a small third-party scraped calendar service, not an official source — treat these two fields as unverified and cross-check anything you'd trade on."
+                : "Forecast/consensus figures require a paid data license or a connected third-party key and aren't included yet."}
+              {" "}Government shutdowns or agency notices can still shift a date after publication.
             </div>
           </>
         )}
