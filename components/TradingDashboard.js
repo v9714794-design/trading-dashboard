@@ -1285,19 +1285,23 @@ export default function TapeApp() {
               const d = new Date(ev.date);
               const days = Math.ceil((d - today) / 86400000);
               return (
-                <div className="event-row" key={`${ev.name}-${ev.date}`}>
-                  <div className="event-name">{ev.name}</div>
-                  <div className={`event-days ${days <= 3 ? "soon" : ""}`}>{days}d — {ev.date}</div>
+                <div className="event-row" key={`${ev.name}-${ev.date}`} style={{ flexDirection: "column", alignItems: "stretch", gap: 3 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div className="event-name">{ev.name}</div>
+                    <div className={`event-days ${days <= 3 ? "soon" : ""}`}>{days}d — {ev.date}</div>
+                  </div>
+                  {ev.previous && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Previous: {ev.previous}</div>}
                 </div>
               );
             })}
             <div className="disclaimer">
               Dates sourced from the official White House/OMB "Schedule of Release Dates for Principal
               Federal Economic Indicators for 2026" (BEA, BLS, Census, and Fed release calendars) — a
-              verified static list for the full year, not a live FRED API pull. FRED's own release-dates
-              endpoint turned out to only report already-occurred releases, never future-scheduled ones,
-              so an official published schedule is the reliable source here. Government shutdowns or
-              agency notices can still shift a date after publication.
+              verified static list for the full year, not a live FRED API pull. "Previous" is the real
+              last actual reading, pulled live from FRED. Forecast/consensus figures require a paid data
+              license (Bloomberg, Trading Economics API, Econoday) and aren't included here — I won't
+              show a made-up number where a real one should be. Government shutdowns or agency notices
+              can still shift a date after publication.
             </div>
           </>
         )}
