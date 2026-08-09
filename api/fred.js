@@ -71,6 +71,59 @@ export default async function handler(req, res) {
       return;
     }
 
+    if (transform === "accel") {
+      // Is the period-over-period growth RATE accelerating or decelerating —
+      // not just whether the level went up or down (a growing economy's
+      // level rises almost every quarter regardless, so that alone can't
+      // distinguish "healthy expansion" from "slowing toward stall speed").
+      const url = new URL("https://api.stlouisfed.org/fred/series/observations");
+      url.searchParams.set("series_id", series);
+      url.searchParams.set("api_key", apiKey);
+      url.searchParams.set("file_type", "json");
+      url.searchParams.set("sort_order", "desc");
+      url.searchParams.set("limit", "4");
+
+      const fredRes = await fetch(url.toString());
+      if (!fredRes.ok) {
+        const text = await fredRes.text();
+        res.status(fredRes.status).json({ error: "FRED request failed", detail: text });
+        return;
+      }
+      const data = await fredRes.json();
+      const obs = (data.observations || []).filter((o) => o.value !== ".");
+      if (obs.length < 2) {
+        res.status(404).json({ error: `Not enough observations for ${series} to compute growth rate` });
+        return;
+      }
+
+      const rateAt = (i) => {
+        if (i + 1 >= obs.length) return null;
+        const now = parseFloat(obs[i].value);
+        const prior = parseFloat(obs[i + 1].value);
+        return ((now - prior) / prior) * 100;
+      };
+
+      const rateLatest = rateAt(0);
+      const ratePrev = rateAt(1);
+
+      let trend = "flat";
+      if (ratePrev != null) {
+        if (rateLatest > ratePrev) trend = "up";
+        else if (rateLatest < ratePrev) trend = "down";
+      }
+
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+      res.status(200).json({
+        series,
+        value: rateLatest.toFixed(2),
+        prevValue: ratePrev != null ? ratePrev.toFixed(2) : null,
+        trend,
+        date: obs[0].date,
+        transform: "accel",
+      });
+      return;
+    }
+
     const url = new URL("https://api.stlouisfed.org/fred/series/observations");
     url.searchParams.set("series_id", series);
     url.searchParams.set("api_key", apiKey);

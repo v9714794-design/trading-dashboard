@@ -122,22 +122,22 @@ const MICRO_OVERVIEW_IDS = ["RSAFS", "INDPRO", "PPIACO", "HOUST", "MSPUS", "MORT
 const BANKS_OVERVIEW_IDS = ["STLFSI4", "WALCL", "RRPONTSYD", "WRESBAL", "SOFR"];
 
 const REGIME_MAP = {
-  "Expanding|Cooling": {
+  "Accelerating|Cooling": {
     name: "Goldilocks",
     bias: "Historically supportive of risk assets — growth expanding while inflation cools.",
     equities: "Constructive", bonds: "Neutral-to-positive", commodities: "Neutral", usd: "Softer bias",
   },
-  "Expanding|Rising": {
+  "Accelerating|Rising": {
     name: "Reflation",
     bias: "Growth expanding alongside rising inflation — cyclicals & real assets often lead.",
     equities: "Selective (cyclicals)", bonds: "Pressured", commodities: "Constructive", usd: "Mixed",
   },
-  "Contracting|Rising": {
+  "Decelerating|Rising": {
     name: "Stagflation",
     bias: "The hardest regime — growth slowing while inflation stays sticky.",
     equities: "Defensive", bonds: "Pressured", commodities: "Constructive (esp. gold)", usd: "Firmer bias",
   },
-  "Contracting|Cooling": {
+  "Decelerating|Cooling": {
     name: "Deflationary Bust",
     bias: "Growth and inflation both falling — classic risk-off, flight to quality.",
     equities: "Defensive", bonds: "Constructive", commodities: "Soft", usd: "Firmer (safe-haven)",
@@ -451,6 +451,14 @@ export default function TapeApp() {
     return res.json();
   }, 10 * 60000, []);
 
+  const gdpAccel = useLivePoll(async () => {
+    const res = await fetch(`${MACRO_API_BASE}/api/fred?series=GDPC1&transform=accel`);
+    if (!res.ok) throw new Error("no proxy");
+    const json = await res.json();
+    if (json.value == null) throw new Error("no value");
+    return json;
+  }, 0, []);
+
   const btc = crypto.data?.find((c) => c.id === "bitcoin");
   const xau = metals.data?.find((m) => m.symbol === "XAU");
   const xag = metals.data?.find((m) => m.symbol === "XAG");
@@ -491,7 +499,7 @@ export default function TapeApp() {
   const fedFunds = macro.data?.find((m) => m.id === "FEDFUNDS");
   const curve = macro.data?.find((m) => m.id === "T10Y2Y");
 
-  const growthState = gdp?.trend === "up" ? "Expanding" : gdp?.trend === "down" ? "Contracting" : null;
+  const growthState = gdpAccel.data?.trend === "up" ? "Accelerating" : gdpAccel.data?.trend === "down" ? "Decelerating" : null;
   const inflationState = cpi?.trend === "up" ? "Rising" : cpi?.trend === "down" ? "Cooling" : null;
   const regimeKey = growthState && inflationState ? `${growthState}|${inflationState}` : null;
   const regime = regimeKey ? REGIME_MAP[regimeKey] : null;
@@ -608,7 +616,7 @@ export default function TapeApp() {
   const bondsConfluence = buildConfluence("US 10Y Treasuries (price)", [
     factor("Fed stance", hawkLabel === "Dovish" ? 1 : hawkLabel === "Hawkish" ? -1 : 0, hawkLabel),
     factor("Inflation trend", cpi?.trend === "down" ? 1 : cpi?.trend === "up" ? -1 : 0, cpi ? `CPI ${cpi.value}` : "—"),
-    factor("Growth trend", growthState === "Contracting" ? 1 : growthState === "Expanding" ? -1 : 0, growthState || "—"),
+    factor("Growth trend", growthState === "Decelerating" ? 1 : growthState === "Accelerating" ? -1 : 0, growthState || "—"),
     factor("Financial stress", stlfsi?.trend === "up" ? 1 : stlfsi?.trend === "down" ? -1 : 0, stlfsi ? stlfsi.value : "—"),
   ]);
 
