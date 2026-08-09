@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     url.searchParams.set("api_key", apiKey);
     url.searchParams.set("file_type", "json");
     url.searchParams.set("include_release_dates_with_no_data", "false");
-    url.searchParams.set("sort_order", "asc");
+    url.searchParams.set("sort_order", "desc");
     url.searchParams.set("limit", "1000");
 
     const r = await fetch(url.toString());
@@ -42,7 +42,9 @@ export default async function handler(req, res) {
     const data = await r.json();
     const dates = data.release_dates || [];
 
-    const upcoming = dates.filter((d) => d.date >= today && d.date <= future);
+    const upcoming = dates
+      .filter((d) => d.date >= today && d.date <= future)
+      .sort((a, b) => a.date.localeCompare(b.date)); // soonest first, so the dedupe below keeps each release's NEXT date, not its latest one in the window
     const matched = upcoming.filter((d) =>
       WATCHLIST.some((w) => (d.release_name || "").toLowerCase().includes(w.toLowerCase()))
     );
