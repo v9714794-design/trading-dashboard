@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, Bitcoin, Landmark,
   CircleDollarSign, Gem, LayoutGrid, Compass, Building2,
   Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send, Gavel,
-  Menu, X, Sun, Moon,
+  Menu, X, Sun, Moon, Calendar,
 } from "lucide-react";
 
 const MACRO_API_BASE = "";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { id: "regime", label: "Regime", Icon: Compass },
   { id: "banks", label: "Banks", Icon: Building2 },
   { id: "fed", label: "Fed", Icon: CalendarClock },
+  { id: "calendar", label: "Econ Calendar", Icon: Calendar },
   { id: "confluence", label: "Confluence", Icon: Scale },
   { id: "makers", label: "Market Makers", Icon: Gavel },
   { id: "sentiment", label: "Sentiment", Icon: Gauge },
@@ -458,6 +459,13 @@ export default function TapeApp() {
     if (json.value == null) throw new Error("no value");
     return json;
   }, 0, []);
+
+  const econCalendar = useLivePoll(async () => {
+    const res = await fetch("/api/calendar");
+    if (!res.ok) throw new Error("calendar unavailable");
+    const json = await res.json();
+    return json.events || [];
+  }, 60 * 60000, []);
 
   const btc = crypto.data?.find((c) => c.id === "bitcoin");
   const xau = metals.data?.find((m) => m.symbol === "XAU");
@@ -1254,6 +1262,31 @@ export default function TapeApp() {
               A simple 4-factor average of Fed funds rate, 2Y yield, CPI, and financial-stress trend
               directions from FRED — not the CME FedWatch tool and not an official rate-probability
               model. Treat this as a quick directional read, not a forecast.
+            </div>
+          </>
+        )}
+
+        {tab === "calendar" && (
+          <>
+            <SectionLabel eyebrow="Live from FRED release schedule">Economic Calendar</SectionLabel>
+            {econCalendar.error && <p className="empty-note">Calendar feed unavailable right now.</p>}
+            {!econCalendar.data && !econCalendar.error && <p className="empty-note">Loading upcoming releases…</p>}
+            {econCalendar.data?.length === 0 && <p className="empty-note">No upcoming releases found in the next 90 days.</p>}
+            {econCalendar.data?.map((ev) => {
+              const d = new Date(ev.date);
+              const days = Math.ceil((d - today) / 86400000);
+              return (
+                <div className="event-row" key={`${ev.name}-${ev.date}`}>
+                  <div className="event-name">{ev.name}</div>
+                  <div className={`event-days ${days <= 3 ? "soon" : ""}`}>{days}d — {ev.date}</div>
+                </div>
+              );
+            })}
+            <div className="disclaimer">
+              Pulled live from FRED's own release calendar (api.stlouisfed.org/fred/releases/dates),
+              filtered to the major indicators this dashboard tracks (CPI, jobs report, GDP, PCE, PPI,
+              retail sales, industrial production, housing starts, consumer sentiment). Official dates,
+              refreshed hourly.
             </div>
           </>
         )}
