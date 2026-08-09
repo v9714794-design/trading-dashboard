@@ -1,89 +1,48 @@
-const WATCHLIST = [
-  "Consumer Price Index",
-  "Employment Situation",
-  "Gross Domestic Product",
-  "Personal Income and Outlays",
-  "Producer Price Index",
-  "Advance Monthly Sales for Retail and Food Services",
-  "Industrial Production and Capacity Utilization",
-  "New Residential Construction",
-  "University of Michigan",
-  "Employment Cost Index",
+// 2026 release dates sourced from the official White House/OMB "Schedule of
+// Release Dates for Principal Federal Economic Indicators" (published by
+// BEA/BLS/Census/Fed via omb.gov), not FRED's API — FRED's releases/dates
+// endpoint turned out to only return already-occurred dates, never
+// future-scheduled ones, so a verified static calendar is the reliable path
+// (same approach already used elsewhere in this dashboard for FOMC dates).
+function datesFromMonthDays(name, days) {
+  return days
+    .map((day, i) => (day ? { name, date: `2026-${String(i + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` } : null))
+    .filter(Boolean);
+}
+
+const STATIC_EVENTS_2026 = [
+  ...datesFromMonthDays("CPI (Consumer Price Index)", [13, 11, 11, 10, 12, 10, 14, 12, 11, 14, 10, 10]),
+  ...datesFromMonthDays("PPI (Producer Price Index)", [14, 12, 12, 14, 13, 11, 15, 13, 10, 15, 13, 15]),
+  ...datesFromMonthDays("Employment Situation (NFP)", [9, 6, 6, 3, 8, 5, 2, 7, 4, 2, 6, 4]),
+  ...datesFromMonthDays("Retail Sales", [15, 17, 16, 16, 14, 17, 16, 14, 16, 15, 17, 16]),
+  ...datesFromMonthDays("Industrial Production", [16, 18, 16, 16, 15, 15, 17, 18, 18, 16, 17, 16]),
+  ...datesFromMonthDays("Housing Starts", [21, 18, 17, 17, 19, 16, 17, 18, 17, 20, 18, 17]),
+  ...datesFromMonthDays("Personal Income & Outlays (PCE)", [29, 26, 27, 30, 28, 25, 30, 26, 30, 29, 25, 23]),
+  ...datesFromMonthDays("Employment Cost Index", [30, null, null, 30, null, null, 31, null, null, 30, null, null]),
+  { name: "GDP (2Q'26, second estimate)", date: "2026-08-26" },
+  { name: "GDP (2Q'26, third estimate)", date: "2026-09-30" },
+  { name: "GDP (3Q'26, advance estimate)", date: "2026-10-29" },
+  { name: "GDP (3Q'26, second estimate)", date: "2026-11-25" },
+  { name: "GDP (3Q'26, third estimate)", date: "2026-12-23" },
 ];
 
 export default async function handler(req, res) {
-  const apiKey = process.env.FRED_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "FRED_API_KEY is not set in this project's environment variables" });
-    return;
+  const today = new Date().toISOString().slice(0, 10);
+  const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const upcoming = STATIC_EVENTS_2026
+    .filter((e) => e.date >= today && e.date <= future)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const seen = new Set();
+  const events = [];
+  for (const e of upcoming) {
+    if (seen.has(e.name)) continue;
+    seen.add(e.name);
+    events.push(e);
+    if (events.length >= 14) break;
   }
 
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-    // Without realtime_start/realtime_end, FRED's default (today/today) only
-    // returns dates already realized as of today — future-scheduled release
-    // dates need an explicit realtime_end reaching into the future to show up.
-    const url = new URL("https://api.stlouisfed.org/fred/releases/dates");
-    url.searchParams.set("api_key", apiKey);
-    url.searchParams.set("file_type", "json");
-    url.searchParams.set("realtime_start", today);
-    url.searchParams.set("realtime_end", future);
-    url.searchParams.set("include_release_dates_with_no_data", "false");
-    url.searchParams.set("sort_order", "asc");
-    url.searchParams.set("limit", "1000");
-
-    const r = await fetch(url.toString());
-    if (!r.ok) {
-      res.setHeader("Cache-Control", "no-store");
-      res.status(200).json({ events: [], warning: `FRED responded with status ${r.status}` });
-      return;
-    }
-
-    const data = await r.json();
-    const dates = data.release_dates || [];
-
-    const upcoming = dates
-      .filter((d) => d.date >= today && d.date <= future)
-      .sort((a, b) => a.date.localeCompare(b.date));
-    const matched = upcoming.filter((d) =>
-      WATCHLIST.some((w) => (d.release_name || "").toLowerCase().includes(w.toLowerCase()))
-    );
-
-    const seen = new Set();
-    const events = [];
-    for (const d of matched) {
-      if (seen.has(d.release_name)) continue;
-      seen.add(d.release_name);
-      events.push({ name: d.release_name, date: d.date });
-      if (events.length >= 12) break;
-    }
-    events.sort((a, b) => a.date.localeCompare(b.date));
-
-    if (events.length === 0) {
-      res.setHeader("Cache-Control", "no-store");
-      res.status(200).json({
-        events,
-        debug: {
-          checkedAt: new Date().toISOString(),
-          codeVersion: "realtime-window-v3",
-          today,
-          future,
-          totalDatesReturned: dates.length,
-          upcomingInWindow: upcoming.length,
-          sampleNames: [...new Set(upcoming.slice(0, 20).map((d) => d.release_name))],
-          firstFewRawDates: dates.slice(0, 5).map((d) => d.date),
-          lastFewRawDates: dates.slice(-5).map((d) => d.date),
-        },
-      });
-      return;
-    }
-
-    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=7200");
-    res.status(200).json({ events });
-  } catch (err) {
-    res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ events: [], warning: String(err) });
-  }
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  res.status(200).json({ events, source: "static-2026-omb-schedule" });
 }

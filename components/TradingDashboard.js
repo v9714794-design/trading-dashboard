@@ -157,32 +157,33 @@ const FOMC_2026 = [
   { date: "2026-12-09", sep: true },
 ];
 
-// 2026 CPI release days. Jul/Aug confirmed via bls.gov; remaining months are
-// projected off the BLS second-week pattern and may shift slightly.
+// 2026 CPI release days — official OMB "Schedule of Release Dates for
+// Principal Federal Economic Indicators" (BLS), confirmed for the full year.
 const CPI_2026 = [
   { date: "2026-08-12", confirmed: true },
-  { date: "2026-09-15", confirmed: false },
-  { date: "2026-10-14", confirmed: false },
-  { date: "2026-11-13", confirmed: false },
-  { date: "2026-12-15", confirmed: false },
+  { date: "2026-09-11", confirmed: true },
+  { date: "2026-10-14", confirmed: true },
+  { date: "2026-11-10", confirmed: true },
+  { date: "2026-12-10", confirmed: true },
 ];
 
-// 2026 Non-Farm Payrolls (Employment Situation) release days. Sep confirmed
-// via bls.gov; remaining months follow the usual "first Friday" pattern.
+// 2026 Non-Farm Payrolls (Employment Situation) release days — official OMB
+// schedule (BLS), confirmed for the full year.
 const NFP_2026 = [
   { date: "2026-09-04", confirmed: true },
-  { date: "2026-10-02", confirmed: false },
-  { date: "2026-11-06", confirmed: false },
-  { date: "2026-12-04", confirmed: false },
+  { date: "2026-10-02", confirmed: true },
+  { date: "2026-11-06", confirmed: true },
+  { date: "2026-12-04", confirmed: true },
 ];
 
-// 2026 Advance Retail Sales release days, via census.gov's release calendar.
+// 2026 Advance Retail Sales release days — official OMB schedule (Census),
+// confirmed for the full year.
 const RETAIL_2026 = [
   { date: "2026-08-14", confirmed: true },
-  { date: "2026-09-16", confirmed: false },
-  { date: "2026-10-15", confirmed: false },
-  { date: "2026-11-17", confirmed: false },
-  { date: "2026-12-16", confirmed: false },
+  { date: "2026-09-16", confirmed: true },
+  { date: "2026-10-15", confirmed: true },
+  { date: "2026-11-17", confirmed: true },
+  { date: "2026-12-16", confirmed: true },
 ];
 
 // Illustrative average 1-hour reaction stats for gold/BTC around each print.
@@ -1269,7 +1270,7 @@ export default function TapeApp() {
 
         {tab === "calendar" && (
           <>
-            <SectionLabel eyebrow="Live from FRED release schedule">Economic Calendar</SectionLabel>
+            <SectionLabel eyebrow="Official 2026 government release schedule">Economic Calendar</SectionLabel>
             {econCalendar.error && <p className="empty-note">Calendar feed unavailable right now.</p>}
             {!econCalendar.data && !econCalendar.error && <p className="empty-note">Loading upcoming releases…</p>}
             {econCalendar.data?.events?.length === 0 && <p className="empty-note">No upcoming releases found in the next 90 days.</p>}
@@ -1284,10 +1285,12 @@ export default function TapeApp() {
               );
             })}
             <div className="disclaimer">
-              Pulled live from FRED's own release calendar (api.stlouisfed.org/fred/releases/dates),
-              filtered to the major indicators this dashboard tracks (CPI, jobs report, GDP, PCE, PPI,
-              retail sales, industrial production, housing starts, consumer sentiment). Official dates,
-              refreshed hourly.
+              Dates sourced from the official White House/OMB "Schedule of Release Dates for Principal
+              Federal Economic Indicators for 2026" (BEA, BLS, Census, and Fed release calendars) — a
+              verified static list for the full year, not a live FRED API pull. FRED's own release-dates
+              endpoint turned out to only report already-occurred releases, never future-scheduled ones,
+              so an official published schedule is the reliable source here. Government shutdowns or
+              agency notices can still shift a date after publication.
             </div>
           </>
         )}
