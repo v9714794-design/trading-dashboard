@@ -71,6 +71,56 @@ export default async function handler(req, res) {
       return;
     }
 
+    if (transform === "mom_change") {
+      // The raw month-over-month CHANGE in level (e.g. jobs added/lost),
+      // not the % growth rate — this is what "Non-Farm Payrolls" means in
+      // headlines/trading contexts, as opposed to the total employment level.
+      const url = new URL("https://api.stlouisfed.org/fred/series/observations");
+      url.searchParams.set("series_id", series);
+      url.searchParams.set("api_key", apiKey);
+      url.searchParams.set("file_type", "json");
+      url.searchParams.set("sort_order", "desc");
+      url.searchParams.set("limit", "3");
+
+      const fredRes = await fetch(url.toString());
+      if (!fredRes.ok) {
+        const text = await fredRes.text();
+        res.status(fredRes.status).json({ error: "FRED request failed", detail: text });
+        return;
+      }
+      const data = await fredRes.json();
+      const obs = (data.observations || []).filter((o) => o.value !== ".");
+      if (obs.length < 2) {
+        res.status(404).json({ error: `Not enough observations for ${series} to compute change` });
+        return;
+      }
+
+      const changeAt = (i) => {
+        if (i + 1 >= obs.length) return null;
+        return parseFloat(obs[i].value) - parseFloat(obs[i + 1].value);
+      };
+
+      const changeLatest = changeAt(0);
+      const changePrev = changeAt(1);
+
+      let trend = "flat";
+      if (changePrev != null) {
+        if (changeLatest > changePrev) trend = "up";
+        else if (changeLatest < changePrev) trend = "down";
+      }
+
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+      res.status(200).json({
+        series,
+        value: changeLatest.toFixed(0),
+        prevValue: changePrev != null ? changePrev.toFixed(0) : null,
+        trend,
+        date: obs[0].date,
+        transform: "mom_change",
+      });
+      return;
+    }
+
     if (transform === "accel") {
       // Is the period-over-period growth RATE accelerating or decelerating —
       // not just whether the level went up or down (a growing economy's

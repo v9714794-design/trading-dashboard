@@ -55,7 +55,7 @@ const MACRO_SERIES = [
   { category: "Prices & Inflation", id: "M2SL", label: "M2 Money Supply", placeholder: "$21.6T", sense: "up-bull", format: "trillionsFromBillions" },
 
   { category: "Labor & Socioeconomic", id: "UNRATE", label: "Unemployment Rate", placeholder: "4.1%", sense: "up-bear", format: "percent" },
-  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls", placeholder: "159.5M", sense: "up-bull", format: "millionsFromThousands" },
+  { category: "Labor & Socioeconomic", id: "PAYEMS", label: "Nonfarm Payrolls (chg)", placeholder: "-23K", sense: "up-bull", format: "signedK", yoy: false, momChange: true },
   { category: "Labor & Socioeconomic", id: "CIVPART", label: "Labor Force Participation", placeholder: "62.5%", sense: "up-bull", format: "percent" },
   { category: "Labor & Socioeconomic", id: "ICSA", label: "Initial Jobless Claims", placeholder: "225K", sense: "up-bear", format: "thousandsK" },
   { category: "Labor & Socioeconomic", id: "MEHOINUSA672N", label: "Median Household Income", placeholder: "$80.6K", sense: "up-bull", format: "dollar" },
@@ -94,6 +94,7 @@ function formatMacroValue(fmt, raw) {
     case "billions": return `$${n.toFixed(1)}B`;
     case "millionsFromThousands": return `${(n / 1000).toFixed(2)}M`;
     case "thousandsK": return `${Math.round(n).toLocaleString()}`;
+    case "signedK": return `${n > 0 ? "+" : ""}${Math.round(n)}K`;
     case "dollar": return `$${Math.round(n).toLocaleString()}`;
     default: return raw;
   }
@@ -432,12 +433,18 @@ export default function TapeApp() {
     const results = await Promise.all(
       MACRO_SERIES.map(async (s) => {
         try {
-          const qs = s.yoy ? `series=${s.id}&transform=yoy` : `series=${s.id}`;
+          const qs = s.yoy
+            ? `series=${s.id}&transform=yoy`
+            : s.momChange
+              ? `series=${s.id}&transform=mom_change`
+              : `series=${s.id}`;
           const res = await fetch(`${MACRO_API_BASE}/api/fred?${qs}`);
           if (!res.ok) throw new Error("no proxy");
           const json = await res.json();
           if (json.value == null) throw new Error("no value");
-          const displayValue = s.yoy ? `${parseFloat(json.value).toFixed(2)}%` : formatMacroValue(s.format, json.value);
+          const displayValue = s.yoy
+            ? `${parseFloat(json.value).toFixed(2)}%`
+            : formatMacroValue(s.format, json.value);
           return { ...s, value: displayValue, raw: json.value, trend: json.trend ?? "flat", live: true };
         } catch {
           return { ...s, value: s.placeholder, raw: null, trend: "flat", live: false };
