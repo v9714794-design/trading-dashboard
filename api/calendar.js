@@ -22,11 +22,13 @@ export default async function handler(req, res) {
     const today = new Date().toISOString().slice(0, 10);
     const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+    // NOTE: realtime_start/realtime_end on this endpoint control FRED's
+    // data-revision "vintage" window, NOT which future release dates come
+    // back — leaving them out (API defaults to today) and filtering the
+    // returned dates ourselves is the reliable way to get an upcoming list.
     const url = new URL("https://api.stlouisfed.org/fred/releases/dates");
     url.searchParams.set("api_key", apiKey);
     url.searchParams.set("file_type", "json");
-    url.searchParams.set("realtime_start", today);
-    url.searchParams.set("realtime_end", future);
     url.searchParams.set("include_release_dates_with_no_data", "false");
     url.searchParams.set("sort_order", "asc");
     url.searchParams.set("limit", "1000");
@@ -40,7 +42,8 @@ export default async function handler(req, res) {
     const data = await r.json();
     const dates = data.release_dates || [];
 
-    const matched = dates.filter((d) =>
+    const upcoming = dates.filter((d) => d.date >= today && d.date <= future);
+    const matched = upcoming.filter((d) =>
       WATCHLIST.some((w) => (d.release_name || "").toLowerCase().includes(w.toLowerCase()))
     );
 
@@ -55,6 +58,19 @@ export default async function handler(req, res) {
     events.sort((a, b) => a.date.localeCompare(b.date));
 
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=7200");
+    if (events.length === 0) {
+      // Temporary diagnostics so we can see exactly what FRED returned if
+      // the watchlist match (or date filter) still comes up empty.
+      res.status(200).json({
+        events,
+        debug: {
+          totalDatesReturned: dates.length,
+          upcomingInWindow: upcoming.length,
+          sampleNames: [...new Set(upcoming.slice(0, 20).map((d) => d.release_name))],
+        },
+      });
+      return;
+    }
     res.status(200).json({ events });
   } catch (err) {
     res.status(200).json({ events: [], warning: String(err) });

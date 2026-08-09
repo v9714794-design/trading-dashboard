@@ -464,7 +464,8 @@ export default function TapeApp() {
     const res = await fetch("/api/calendar");
     if (!res.ok) throw new Error("calendar unavailable");
     const json = await res.json();
-    return json.events || [];
+    if (json.debug) console.warn("Econ calendar debug:", json.debug);
+    return json;
   }, 60 * 60000, []);
 
   const btc = crypto.data?.find((c) => c.id === "bitcoin");
@@ -1271,8 +1272,8 @@ export default function TapeApp() {
             <SectionLabel eyebrow="Live from FRED release schedule">Economic Calendar</SectionLabel>
             {econCalendar.error && <p className="empty-note">Calendar feed unavailable right now.</p>}
             {!econCalendar.data && !econCalendar.error && <p className="empty-note">Loading upcoming releases…</p>}
-            {econCalendar.data?.length === 0 && <p className="empty-note">No upcoming releases found in the next 90 days.</p>}
-            {econCalendar.data?.map((ev) => {
+            {econCalendar.data?.events?.length === 0 && <p className="empty-note">No upcoming releases found in the next 90 days.</p>}
+            {econCalendar.data?.events?.map((ev) => {
               const d = new Date(ev.date);
               const days = Math.ceil((d - today) / 86400000);
               return (
