@@ -59,16 +59,22 @@ export default async function handler(req, res) {
     }
     events.sort((a, b) => a.date.localeCompare(b.date));
 
-    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=7200");
+    res.setHeader("Cache-Control", "no-store");
     if (events.length === 0) {
       // Temporary diagnostics so we can see exactly what FRED returned if
       // the watchlist match (or date filter) still comes up empty.
       res.status(200).json({
         events,
         debug: {
+          checkedAt: new Date().toISOString(),
+          codeVersion: "desc-v2",
+          today,
+          future,
           totalDatesReturned: dates.length,
           upcomingInWindow: upcoming.length,
           sampleNames: [...new Set(upcoming.slice(0, 20).map((d) => d.release_name))],
+          firstFewRawDates: dates.slice(0, 5).map((d) => d.date),
+          lastFewRawDates: dates.slice(-5).map((d) => d.date),
         },
       });
       return;
