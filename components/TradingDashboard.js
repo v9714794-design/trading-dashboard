@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, Bitcoin, Landmark,
   CircleDollarSign, Gem, LayoutGrid, Compass, Building2,
   Gauge, Globe2, Newspaper, Scale, CalendarClock, Bot, Send, Gavel,
-  Menu, X, Sun, Moon, Calendar,
+  Menu, X, Sun, Moon, Calendar, Fish,
 } from "lucide-react";
 
 const MACRO_API_BASE = "";
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { id: "sentiment", label: "Sentiment", Icon: Gauge },
   { id: "risk", label: "Risk", Icon: Globe2 },
   { id: "crypto", label: "Crypto", Icon: Bitcoin },
+  { id: "whales", label: "Whale Watch", Icon: Fish },
   { id: "forex", label: "Forex", Icon: CircleDollarSign },
   { id: "metals", label: "Metals", Icon: Gem },
   { id: "ask", label: "Ask AI", Icon: Bot },
@@ -481,6 +482,14 @@ export default function TapeApp() {
     if (json.debug) console.warn("Econ calendar debug:", json.debug);
     return json;
   }, 60 * 60000, []);
+
+  const whales = useLivePoll(async () => {
+    const res = await fetch("/api/whales");
+    if (!res.ok) throw new Error("whale feed unavailable");
+    const json = await res.json();
+    if (json.debug) console.warn("Whale feed debug:", json.debug);
+    return json;
+  }, 3 * 60000, []);
 
   const btc = crypto.data?.find((c) => c.id === "bitcoin");
   const xau = metals.data?.find((m) => m.symbol === "XAU");
@@ -1189,6 +1198,36 @@ export default function TapeApp() {
                 </div>
               </div>
             ))}
+          </>
+        )}
+
+        {tab === "whales" && (
+          <>
+            <SectionLabel eyebrow="On-chain, $1M+ transfers">Whale Watch</SectionLabel>
+            {whales.error && <p className="empty-note">Whale feed unavailable right now.</p>}
+            {!whales.data && !whales.error && <p className="empty-note">Loading recent large transfers…</p>}
+            {whales.data?.transactions?.length === 0 && <p className="empty-note">No $1M+ transfers spotted in the last poll.</p>}
+            {whales.data?.transactions?.map((tx) => (
+              <div className="card-row" key={`${tx.chain}-${tx.hash}`}>
+                <div className="row-name">
+                  <span className={`factor-tag ${tx.chain === "bitcoin" ? "bull" : "neu"}`} style={{ marginRight: 4 }}>
+                    {tx.chain === "bitcoin" ? "BTC" : "ETH"}
+                  </span>
+                  <div>
+                    <div className="sym">{tx.hash?.slice(0, 10)}…{tx.hash?.slice(-6)}</div>
+                    <div className="sym">{tx.time}</div>
+                  </div>
+                </div>
+                <div className="row-right"><div className="price">{tx.display}</div></div>
+              </div>
+            ))}
+            <div className="disclaimer">
+              Free DIY whale tracker, not the paid Whale Alert service — pulls recent on-chain transfers
+              above $1M straight from Bitcoin and Ethereum via Blockchair's free API. No exchange/entity
+              labels (that attribution is exactly what paid services sell) — just raw transaction hashes,
+              chain, and USD value. Reflects transfers since the last refresh (every ~3 min), not a
+              continuous live stream.
+            </div>
           </>
         )}
 
