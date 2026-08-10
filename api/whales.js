@@ -20,8 +20,14 @@ async function fetchChain(chain, usdField) {
   try {
     const r = await fetch(url, { signal: controller.signal });
     const status = r.status;
-    if (!r.ok) return { chain, ok: false, status, transactions: [] };
-    const data = await r.json();
+    const bodyText = await r.text();
+    if (!r.ok) return { chain, ok: false, status, transactions: [], bodyText: bodyText.slice(0, 500) };
+    let data;
+    try {
+      data = JSON.parse(bodyText);
+    } catch {
+      return { chain, ok: false, status, transactions: [], bodyText: bodyText.slice(0, 500) };
+    }
     const rows = data.data || [];
     const transactions = rows.map((tx) => ({
       chain,
@@ -48,10 +54,13 @@ export default async function handler(req, res) {
     (b.time || "").localeCompare(a.time || "")
   );
 
-  res.setHeader("Cache-Control", "s-maxage=180, stale-while-revalidate=360");
+  res.setHeader("Cache-Control", "no-store");
   res.status(200).json({
     transactions,
     thresholdUsd: WHALE_THRESHOLD_USD,
-    debug: { btc: { ok: btc.ok, status: btc.status, count: btc.rawCount ?? 0 }, eth: { ok: eth.ok, status: eth.status, count: eth.rawCount ?? 0 } },
+    debug: {
+      btc: { ok: btc.ok, status: btc.status, count: btc.rawCount ?? 0, bodyText: btc.bodyText },
+      eth: { ok: eth.ok, status: eth.status, count: eth.rawCount ?? 0, bodyText: eth.bodyText },
+    },
   });
 }
