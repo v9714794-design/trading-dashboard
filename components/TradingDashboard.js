@@ -309,12 +309,18 @@ function OverviewGrid({ title, ids, macroData }) {
       <div className="grid-2" style={{ marginBottom: 18 }}>
         {ids.map((id) => {
           const m = macroData?.find((x) => x.id === id);
+          const bias = m ? biasForSeries(m) : null;
           return (
             <div className="card" key={id}>
               <div className="card-title">{m ? m.label : id}</div>
               <div className="card-value">
                 {m ? m.value : "…"} {m && <TrendArrow trend={m.trend} />}
               </div>
+              {bias && (
+                <span className={`factor-tag ${bias === "Bullish" ? "bull" : bias === "Bearish" ? "bear" : "neu"}`} style={{ marginTop: 6, display: "inline-block" }}>
+                  {bias}
+                </span>
+              )}
             </div>
           );
         })}
